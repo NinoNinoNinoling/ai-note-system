@@ -3,3 +3,30 @@ __pycache__/
 *.pyc
 .env
 *.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.db
+*.sqlite3
+
+# Virtual Environment
+backend/venv/
+venv/
+.venv/
+
+# Node.js
+node_modules/
+
+# AI/ML
+faiss_index/
+*.pkl
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs
+*.log
