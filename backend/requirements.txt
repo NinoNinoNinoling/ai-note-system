@@ -3,7 +3,20 @@ Flask-SQLAlchemy==3.0.5
 Flask-CORS==4.0.0
 python-dotenv==1.0.0
 
-# LangChain + Claude (let pip resolve versions)
+# LangChain + Claude
 langchain
 langchain-anthropic
+langchain-community
+langchain-openai
 anthropic
+
+# RAG System - Vector Search & Embeddings
+sentence-transformers
+faiss-cpu
+numpy
+transformers
+torch
+datasets
+
+# Text Processing
+tiktoken
