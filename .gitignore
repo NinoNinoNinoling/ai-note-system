@@ -1,32 +1,64 @@
-﻿backend/venv/
-__pycache__/
-*.pyc
-.env
-*.db
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-.env
-*.db
-*.sqlite3
-
-# Virtual Environment
-backend/venv/
+﻿# Python 가상환경
 venv/
 .venv/
+env/
+ENV/
+backend/venv/
+**/venv/
+**/.venv/
 
-# Node.js
-node_modules/
+# Python 캐시 및 바이트코드
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
 
-# AI/ML
+# 환경 변수 파일
+.env
+.env.local
+.env.*.local
+
+# 데이터베이스 파일
+*.db
+*.sqlite3
+ai_notes.db
+
+# LangChain / AI 관련
 faiss_index/
+embeddings/
 *.pkl
+*.pickle
 
-# IDEs
+# Node.js (프론트엔드용)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Flask 관련
+instance/
+migrations/versions/*.pyc
+
+# IDE 관련
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# Logs
+# OS 관련
+.DS_Store
+Thumbs.db
+.DS_Store?
+._*
+
+# 로그 파일
 *.log
+logs/
+
+# 임시 파일
+*.tmp
+*.temp
