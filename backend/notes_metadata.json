@@ -1,0 +1,23 @@
+[
+  {
+    "note_id": 1,
+    "title": "LangChain 체인 개념",
+    "content_preview": "# LangChain 체인\n\nLangChain의 체인은 여러 AI 작업을 순서대로 연결하는 핵심 개념입니다.\n\n## 주요 체인 유형\n- LLMChain: 기본 LLM 호출\n- ConversationalRetrievalChain: 대화형 검색\n\n#LangChain #체인 #AI",
+    "full_content": "# LangChain 체인\n\nLangChain의 체인은 여러 AI 작업을 순서대로 연결하는 핵심 개념입니다.\n\n## 주요 체인 유형\n- LLMChain: 기본 LLM 호출\n- ConversationalRetrievalChain: 대화형 검색\n\n#LangChain #체인 #AI",
+    "content_length": 154
+  },
+  {
+    "note_id": 2,
+    "title": "RAG 시스템 구현",
+    "content_preview": "# RAG (Retrieval-Augmented Generation)\n\nRAG는 검색과 생성을 결합한 AI 기술입니다.\n\n## 핵심 구성요소\n1. 문서 임베딩\n2. 벡터 검색 (FAISS)\n3. 컨텍스트 생성\n4. AI 답변 생성\n\n#RAG #검색 #벡터",
+    "full_content": "# RAG (Retrieval-Augmented Generation)\n\nRAG는 검색과 생성을 결합한 AI 기술입니다.\n\n## 핵심 구성요소\n1. 문서 임베딩\n2. 벡터 검색 (FAISS)\n3. 컨텍스트 생성\n4. AI 답변 생성\n\n#RAG #검색 #벡터",
+    "content_length": 142
+  },
+  {
+    "note_id": 3,
+    "title": "Flask API 개발",
+    "content_preview": "# Flask REST API 개발\n\n## Blueprint 사용법\n```python\nfrom flask import Blueprint\napi_bp = Blueprint('api', __name__)\n```\n\n## 에러 핸들링\n```python\n@app.errorhandler(404)\ndef not_found(error):\n    return jsonify...",
+    "full_content": "# Flask REST API 개발\n\n## Blueprint 사용법\n```python\nfrom flask import Blueprint\napi_bp = Blueprint('api', __name__)\n```\n\n## 에러 핸들링\n```python\n@app.errorhandler(404)\ndef not_found(error):\n    return jsonify({'error': 'Not found'}), 404\n```\n\n#Flask #API #Python",
+    "content_length": 254
+  }
+]
