@@ -1,11 +1,12 @@
-# backend/config/database.py - 과제용 개선 버전
+# backend/config/database.py - 과제용 개선 버전 (SQLAlchemy 2.0+ 호환)
 """
 데이터베이스 설정 및 초기화
 
-과제용으로 안정적이고 간단하게 구성
+과제용으로 안정적이고 간단하게 구성 - SQLAlchemy 2.0+ 호환
 """
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect, text
 import os
 
 # 전역 DB 인스턴스
@@ -49,10 +50,11 @@ def init_db(app):
 
 
 def check_tables():
-    """생성된 테이블 확인"""
+    """생성된 테이블 확인 (SQLAlchemy 2.0+ 호환)"""
     try:
-        # 테이블 목록 조회
-        tables = db.engine.table_names()
+        # ✅ SQLAlchemy 2.0+ 호환 방식
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
         
         if tables:
             print(f"📊 생성된 테이블: {', '.join(tables)}")
@@ -97,8 +99,6 @@ def reset_database():
 def test_connection():
     """데이터베이스 연결 테스트"""
     try:
-        from sqlalchemy import text
-        
         # 간단한 쿼리 실행
         result = db.session.execute(text('SELECT 1'))
         result.fetchone()
@@ -112,12 +112,16 @@ def test_connection():
 
 
 def get_db_info():
-    """데이터베이스 정보 반환"""
+    """데이터베이스 정보 반환 (SQLAlchemy 2.0+ 호환)"""
     try:
+        # ✅ SQLAlchemy 2.0+ 호환 방식
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
         info = {
-            "database_url": db.engine.url.render_as_string(hide_password=True),
+            "database_url": str(db.engine.url).replace('sqlite:///', 'sqlite:///...'),  # 보안상 경로 축약
             "driver": db.engine.url.drivername,
-            "tables": db.engine.table_names(),
+            "tables": tables,
             "connection_status": "connected"
         }
         

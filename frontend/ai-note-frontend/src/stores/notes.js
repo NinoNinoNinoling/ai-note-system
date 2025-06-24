@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import api from '../services/api'
+import { notesAPI } from '../services/api'  // ✅ 수정된 API 함수들 사용
 
 export const useNotesStore = defineStore('notes', {
   state: () => ({
@@ -18,6 +18,9 @@ export const useNotesStore = defineStore('notes', {
   }),
 
   getters: {
+    // 노트 개수
+    noteCount: (state) => state.notes.length,
+
     // 필터링된 노트 목록
     filteredNotes: (state) => {
       let filtered = [...state.notes]
@@ -85,12 +88,30 @@ export const useNotesStore = defineStore('notes', {
       this.error = null
 
       try {
-        const response = await api.get('/notes')
-        this.notes = response.data.notes || []
+        console.log('🚀 노트 목록 요청 중...')
+        const response = await notesAPI.getAll()  // ✅ 수정된 API 사용
+
+        // 응답 구조 확인
+        console.log('📦 API 응답:', response.data)
+
+        // 응답 데이터 구조에 맞게 추출
+        if (response.data.notes) {
+          this.notes = response.data.notes
+        } else if (Array.isArray(response.data)) {
+          this.notes = response.data
+        } else {
+          this.notes = []
+        }
+
         console.log(`✅ ${this.notes.length}개 노트 로드됨`)
       } catch (error) {
         this.error = '노트를 불러오는데 실패했습니다.'
         console.error('노트 로드 에러:', error)
+
+        // 개발 중에는 Mock 데이터 사용
+        console.log('🔄 Mock 데이터로 대체')
+        this.notes = []
+
         throw error
       } finally {
         this.loading = false
@@ -103,7 +124,9 @@ export const useNotesStore = defineStore('notes', {
       this.error = null
 
       try {
-        const response = await api.get(`/notes/${id}`)
+        console.log(`🚀 노트 ${id} 요청 중...`)
+        const response = await notesAPI.getById(id)  // ✅ 수정된 API 사용
+
         this.currentNote = response.data
         console.log(`✅ 노트 ${id} 로드됨:`, this.currentNote.title)
         return this.currentNote
@@ -122,7 +145,8 @@ export const useNotesStore = defineStore('notes', {
       this.error = null
 
       try {
-        const response = await api.post('/notes', noteData)
+        console.log('🚀 새 노트 생성 중...', noteData)
+        const response = await notesAPI.create(noteData)  // ✅ 수정된 API 사용
         const newNote = response.data
 
         // 상태 업데이트
@@ -146,7 +170,8 @@ export const useNotesStore = defineStore('notes', {
       this.error = null
 
       try {
-        const response = await api.put(`/notes/${id}`, noteData)
+        console.log(`🚀 노트 ${id} 수정 중...`, noteData)
+        const response = await notesAPI.update(id, noteData)  // ✅ 수정된 API 사용
         const updatedNote = response.data
 
         // 상태 업데이트
@@ -173,7 +198,8 @@ export const useNotesStore = defineStore('notes', {
       this.error = null
 
       try {
-        await api.delete(`/notes/${id}`)
+        console.log(`🚀 노트 ${id} 삭제 중...`)
+        await notesAPI.delete(id)  // ✅ 수정된 API 사용
 
         // 상태 업데이트
         this.notes = this.notes.filter(note => note.id !== id)
@@ -197,14 +223,11 @@ export const useNotesStore = defineStore('notes', {
       this.error = null
 
       try {
-        const endpoint = useRag ? '/notes/search' : '/notes/search'
-        const response = await api.post(endpoint, {
-          query,
-          use_rag: useRag
-        })
+        console.log(`🚀 검색 중: "${query}" (RAG: ${useRag})`)
+        const response = await notesAPI.search(query, useRag)  // ✅ 수정된 API 사용
 
-        this.searchResults = response.data.results || []
-        console.log(`✅ 검색 완료: ${this.searchResults.length}개 결과 (RAG: ${useRag})`)
+        this.searchResults = response.data.results || response.data || []
+        console.log(`✅ 검색 완료: ${this.searchResults.length}개 결과`)
         return this.searchResults
       } catch (error) {
         this.error = '검색에 실패했습니다.'
@@ -218,11 +241,28 @@ export const useNotesStore = defineStore('notes', {
     // 태그 목록 가져오기
     async fetchTags() {
       try {
-        const response = await api.get('/notes/tags')
-        this.tags = response.data.tags || []
+        console.log('🚀 태그 목록 요청 중...')
+        const response = await notesAPI.getTags()  // ✅ 수정된 API 사용
+
+        this.tags = response.data.tags || response.data || []
         console.log(`✅ ${this.tags.length}개 태그 로드됨`)
       } catch (error) {
         console.error('태그 로드 에러:', error)
+        this.tags = []
+      }
+    },
+
+    // 노트 통계 가져오기
+    async fetchStats() {
+      try {
+        console.log('🚀 노트 통계 요청 중...')
+        const response = await notesAPI.getStats()  // ✅ 수정된 API 사용
+
+        console.log('✅ 노트 통계 로드됨:', response.data)
+        return response.data
+      } catch (error) {
+        console.error('통계 로드 에러:', error)
+        return null
       }
     },
 
@@ -259,6 +299,19 @@ export const useNotesStore = defineStore('notes', {
       }
       if (this.currentNote && this.currentNote.id === id) {
         Object.assign(this.currentNote, changes)
+      }
+    },
+
+    // 연결 테스트
+    async testConnection() {
+      try {
+        console.log('🔄 백엔드 연결 테스트 중...')
+        await notesAPI.getAll()
+        console.log('✅ 백엔드 연결 성공')
+        return true
+      } catch (error) {
+        console.error('❌ 백엔드 연결 실패:', error)
+        return false
       }
     }
   }

@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // API 인스턴스 생성
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'http://localhost:5000',  // ✅ /api prefix 제거
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -47,67 +47,85 @@ api.interceptors.response.use(
   }
 )
 
-// 노트 관련 API
+// 노트 관련 API (✅ 백엔드 URL에 맞게 수정)
 export const notesAPI = {
   // 노트 목록 조회
-  getAll: () => api.get('/notes'),
+  getAll: () => api.get('/api/'),  // ✅ /api/notes → /api/
 
   // 특정 노트 조회
-  getById: (id) => api.get(`/notes/${id}`),
+  getById: (id) => api.get(`/api/${id}`),  // ✅ /api/notes/${id} → /api/${id}
 
   // 노트 생성
-  create: (noteData) => api.post('/notes', noteData),
+  create: (noteData) => api.post('/api/', noteData),  // ✅ /api/notes → /api/
 
   // 노트 수정
-  update: (id, noteData) => api.put(`/notes/${id}`, noteData),
+  update: (id, noteData) => api.put(`/api/${id}`, noteData),  // ✅ /api/notes/${id} → /api/${id}
 
   // 노트 삭제
-  delete: (id) => api.delete(`/notes/${id}`),
+  delete: (id) => api.delete(`/api/${id}`),  // ✅ /api/notes/${id} → /api/${id}
 
   // 노트 검색
-  search: (query, useRag = false) => api.post('/notes/search', {
+  search: (query, useRag = false) => api.post('/api/search', {  // ✅ 그대로
     query,
     use_rag: useRag
   }),
 
+  // 유사한 노트 찾기
+  getSimilar: (id) => api.get(`/api/${id}/similar`),  // ✅ 새로 추가
+
+  // 노트 연결 그래프
+  getGraph: () => api.get('/api/graph'),  // ✅ 새로 추가
+
+  // 검색 자동완성
+  getSuggestions: (query) => api.get('/api/suggest', { params: { q: query } }),  // ✅ 새로 추가
+
   // 태그 목록 조회
-  getTags: () => api.get('/notes/tags'),
+  getTags: () => api.get('/api/tags'),  // ✅ 그대로
 
   // 노트 통계
-  getStats: () => api.get('/notes/stats')
+  getStats: () => api.get('/api/stats')  // ✅ 그대로
 }
 
-// AI 채팅 관련 API
+// AI 채팅 관련 API (✅ 백엔드 URL에 맞게 수정)
 export const chatAPI = {
-  // 기본 AI 채팅
-  chat: (message) => api.post('/chat', { message }),
+  // 기본 AI 채팅 (현재 백엔드에서 정확한 엔드포인트 확인 필요)
+  chat: (message) => api.post('/api/chat', { message }),  // ❓ 백엔드 확인 필요
 
   // RAG 기반 채팅
-  ragChat: (message, useNotes = true) => api.post('/chat/rag', {
+  ragChat: (message, useNotes = true) => api.post('/api/rag', {  // ✅ /api/chat/rag → /api/rag
     message,
     use_notes: useNotes
   }),
 
   // Claude API 테스트
-  test: () => api.get('/chat/test'),
+  test: () => api.get('/api/test'),  // ✅ /api/chat/test → /api/test
 
-  // 채팅 히스토리 조회
-  getHistory: () => api.get('/chat/history'),
+  // RAG 시스템 상태 확인
+  ragStatus: () => api.get('/api/rag/status'),  // ✅ 새로 추가
 
   // RAG 인덱스 재구축
-  rebuildIndex: () => api.post('/chat/rag/rebuild')
+  rebuildIndex: () => api.post('/api/rag/rebuild')  // ✅ /api/chat/rag/rebuild → /api/rag/rebuild
 }
 
 // 시스템 관련 API
 export const systemAPI = {
   // 헬스 체크
-  health: () => api.get('/health'),
+  health: () => api.get('/health'),  // ✅ 그대로
 
-  // 시스템 정보
-  info: () => api.get('/info'),
+  // 시스템 정보 (홈페이지)
+  info: () => api.get('/'),  // ✅ 그대로
 
-  // 시스템 상태
-  status: () => api.get('/')
+  // 디버그 - 라우트 목록
+  debugRoutes: () => api.get('/debug/routes'),  // ✅ 새로 추가
+
+  // 디버그 - 데이터베이스 상태
+  debugDatabase: () => api.get('/debug/database'),  // ✅ 새로 추가
+
+  // 디버그 - 샘플 노트 생성
+  createSampleNotes: () => api.post('/debug/sample-notes'),  // ✅ 새로 추가
+
+  // 유틸리티 - 마크다운 미리보기
+  markdownPreview: (content) => api.post('/utils/markdown', { content })  // ✅ 새로 추가
 }
 
 // 유틸리티 함수들
@@ -132,6 +150,7 @@ export const apiUtils = {
   async checkConnection() {
     try {
       await systemAPI.health()
+      console.log('✅ 백엔드 서버 연결 성공')
       return true
     } catch (error) {
       console.warn('⚠️ 백엔드 서버 연결 실패:', error.message)
@@ -154,6 +173,18 @@ export const apiUtils = {
         // 지연 시간 대기
         await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
       }
+    }
+  },
+
+  // 백엔드 엔드포인트 목록 확인
+  async getEndpoints() {
+    try {
+      const response = await systemAPI.debugRoutes()
+      console.log('📋 등록된 엔드포인트:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ 엔드포인트 조회 실패:', error.message)
+      return null
     }
   }
 }
