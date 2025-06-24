@@ -1,22 +1,37 @@
-Flask==2.3.3
-Flask-SQLAlchemy==3.0.5
-Flask-CORS==4.0.0
-python-dotenv==1.0.0
+# AI Note System - LangChain RAG Project
+# Updated dependencies with compatible versions
 
-# LangChain + Claude
-langchain
-langchain-anthropic
-langchain-community
-langchain-openai
-anthropic
+# Flask Web Framework
+Flask>=3.0.0
+Flask-SQLAlchemy>=3.1.1
+Flask-CORS>=4.0.0
 
-# RAG System - Vector Search & Embeddings
-sentence-transformers
-faiss-cpu
-numpy
-transformers
-torch
-datasets
+# Environment Configuration
+python-dotenv>=1.0.0
+
+# Database
+mysql-connector-python>=8.1.0
+
+# AI & LangChain Core (Latest compatible versions)
+langchain>=0.1.20
+langchain-anthropic>=0.1.4
+langchain-community>=0.0.38
+anthropic>=0.17.0
+
+# Vector Database & Embeddings
+faiss-cpu>=1.7.4
+sentence-transformers>=2.2.2
 
 # Text Processing
-tiktoken
+tiktoken>=0.5.1
+
+# Utilities
+numpy>=1.24.3
+python-dateutil>=2.8.2
+
+# Optional: Enhanced features (uncomment if needed)
+# markdown>=3.5.1
+# bleach>=6.1.0
+
+# Production Server (for deployment)
+# gunicorn>=21.2.0
