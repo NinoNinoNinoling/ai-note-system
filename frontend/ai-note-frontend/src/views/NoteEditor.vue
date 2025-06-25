@@ -1,26 +1,24 @@
 <template>
-  <div class="note-editor h-screen bg-gray-50 flex flex-col">
-    <!-- 상단 툴바 -->
-    <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center space-x-4">
-        <router-link
-          to="/notes"
-          class="text-gray-500 hover:text-gray-700 flex items-center space-x-1"
-        >
-          <span>←</span>
-          <span>Notes</span>
-        </router-link>
+  <div class="h-full flex flex-col bg-gray-50">
+    <!-- 상단 헤더 -->
+    <div class="bg-white border-b border-gray-200 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <!-- 뒤로가기 및 제목 -->
+        <div class="flex items-center space-x-4">
+          <button
+            @click="handleBack"
+            class="text-gray-600 hover:text-gray-900 transition-colors"
+            title="Back to Notes"
+          >
+            ← Back
+          </button>
+          <h1 class="text-xl font-semibold text-gray-900">
+            {{ editorMode === 'new' ? '📝 New Note' : '✏️ Edit Note' }}
+          </h1>
+        </div>
 
-        <div class="text-gray-300">|</div>
-
-        <h1 class="text-lg font-medium text-gray-900">
-          {{ editorMode === 'new' ? 'New Note' : 'Edit Note' }}
-        </h1>
-      </div>
-
-      <div class="flex items-center space-x-3">
         <!-- 뷰 모드 토글 -->
-        <div class="flex items-center bg-gray-100 rounded-lg p-1">
+        <div class="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
           <button
             @click="setViewMode('edit')"
             :class="[
@@ -115,83 +113,73 @@
         v-if="viewMode === 'edit' || viewMode === 'split'"
         :class="[
           'bg-white flex flex-col',
-          viewMode === 'split' ? 'w-1/2 border-r border-gray-200' : 'w-full'
+          viewMode === 'split' ? 'w-1/2' : 'w-full'
         ]"
       >
-        <!-- 제목 입력 -->
-        <div class="p-6 border-b border-gray-100">
-          <input
-            ref="titleInput"
-            v-model="note.title"
-            placeholder="Untitled"
-            class="w-full text-2xl font-bold text-gray-900 placeholder-gray-400 border-none outline-none resize-none bg-transparent"
-            @keydown.enter.prevent="focusContent"
-            @input="markAsChanged"
-          />
-        </div>
+        <div class="p-6 flex-1 flex flex-col space-y-4">
+          <!-- 제목 입력 -->
+          <div>
+            <input
+              ref="titleInput"
+              v-model="note.title"
+              type="text"
+              placeholder="Enter note title..."
+              class="w-full text-2xl font-bold text-gray-900 placeholder-gray-400 border-none outline-none resize-none bg-transparent"
+              @input="handleContentChange"
+            />
+          </div>
 
-        <!-- 태그 입력 -->
-        <div class="px-6 py-3 border-b border-gray-100">
-          <div class="flex flex-wrap gap-2 mb-2" v-if="note.tags && note.tags.length > 0">
+          <!-- 태그 입력 -->
+          <div class="flex flex-wrap items-center gap-2">
             <span
-              v-for="(tag, index) in note.tags"
+              v-for="tag in note.tags"
               :key="tag"
-              class="inline-flex items-center space-x-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
+              class="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
             >
-              <span>#{{ tag }}</span>
+              #{{ tag }}
               <button
-                @click="removeTag(index)"
-                class="text-blue-600 hover:text-blue-800 ml-1"
+                @click="removeTag(tag)"
+                class="ml-1 text-blue-600 hover:text-red-600 transition-colors"
               >
                 ×
               </button>
             </span>
+            <div class="flex items-center space-x-2">
+              <input
+                v-model="newTag"
+                type="text"
+                placeholder="Add tag..."
+                class="px-2 py-1 border border-gray-300 rounded text-sm"
+                @keydown.enter="addTag"
+                @keydown.space="addTag"
+              />
+              <button
+                @click="addTag"
+                class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                + Add
+              </button>
+            </div>
           </div>
 
-          <input
-            v-model="newTag"
-            placeholder="Add tags... (press Enter)"
-            class="w-full text-sm text-gray-600 placeholder-gray-400 border-none outline-none bg-transparent"
-            @keydown.enter.prevent="addTag"
-            @keydown="handleTagInput"
-            @input="markAsChanged"
-          />
-        </div>
-
-        <!-- 마크다운 에디터 -->
-        <div class="flex-1 relative">
-          <textarea
-            ref="contentTextarea"
-            v-model="note.content"
-            placeholder="Start writing your note in Markdown...
-
-## Markdown Examples
-- **Bold text**
-- *Italic text*
-- `Code`
-- [Link](url)
-- [[Note Link]]
-- #hashtag
-
-Press Ctrl+S to save"
-            class="w-full h-full p-6 text-gray-900 placeholder-gray-400 border-none outline-none resize-none font-mono text-sm leading-relaxed bg-transparent"
-            @input="handleContentChange"
-            @keydown="handleKeydown"
-          ></textarea>
-
-          <!-- 마크다운 힌트 -->
-          <div class="absolute bottom-4 right-4 text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
-            <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+S</kbd> to save</div>
-            <div class="mt-1"><kbd class="bg-gray-200 px-1 rounded">Ctrl+1,2,3</kbd> view modes</div>
+          <!-- 내용 입력 -->
+          <div class="flex-1">
+            <textarea
+              ref="contentTextarea"
+              v-model="note.content"
+              placeholder="Start writing your note..."
+              class="w-full h-full text-gray-900 placeholder-gray-400 border-none outline-none resize-none bg-transparent font-mono leading-relaxed"
+              @input="handleContentChange"
+            ></textarea>
           </div>
         </div>
       </div>
 
       <!-- 미리보기 패널 -->
       <div
-        v-if="viewMode === 'split' || viewMode === 'preview'"
+        v-if="viewMode === 'preview' || viewMode === 'split'"
         :class="[
-          'bg-white overflow-y-auto',
+          'bg-gray-50 border-l border-gray-200 overflow-y-auto',
           viewMode === 'split' ? 'w-1/2' : 'w-full'
         ]"
       >
@@ -280,7 +268,7 @@ const note = ref({
 
 const originalNote = ref({})
 const newTag = ref('')
-const showPreview = ref(false)
+// ✅ showPreview 변수 제거 (ESLint 오류 해결)
 const viewMode = ref('edit') // 'edit', 'split', 'preview'
 const saving = ref(false)
 const lastSaved = ref(null)
@@ -397,12 +385,17 @@ const loadExistingNote = async () => {
   }
 }
 
-// 메인 초기화 함수
+// 에디터 초기화
 const initializeEditor = async () => {
+  console.log('🚀 에디터 초기화 중...')
+
   if (!determineEditorMode()) {
+    alert('올바르지 않은 노트 경로입니다.')
     router.push('/notes')
     return
   }
+
+  console.log(`📝 에디터 모드: ${editorMode.value}`)
 
   if (editorMode.value === 'new') {
     initializeNewNote()
@@ -411,161 +404,31 @@ const initializeEditor = async () => {
   }
 }
 
-// ✅ 간단한 저장 처리 (중복 방지 + 에러 핸들링)
-const handleSave = async () => {
-  // 🛡️ 중복 실행 완전 차단
-  if (saving.value) {
-    console.log('🚫 이미 저장 중이므로 무시')
-    return
-  }
-
-  // 🛡️ 자동저장 타이머 즉시 취소
-  if (autoSaveTimeout.value) {
-    clearTimeout(autoSaveTimeout.value)
-    autoSaveTimeout.value = null
-  }
-  if (countdownInterval.value) {
-    clearInterval(countdownInterval.value)
-    countdownInterval.value = null
-  }
-  autoSavePending.value = false
-
-  // 🛡️ 저장 상태 즉시 설정
-  saving.value = true
-
-  console.log(`💾 저장 시작 - 모드: ${editorMode.value}, ID: ${currentNoteId.value}`)
-
-  try {
-    let savedNote
-
-    if (editorMode.value === 'new') {
-      // ✅ 새 노트 생성
-      console.log('🚀 새 노트 생성 중...')
-
-      const noteData = {
-        title: note.value.title || 'Untitled',
-        content: note.value.content || '',
-        tags: note.value.tags || []
-      }
-
-      savedNote = await notesStore.createNote(noteData)
-
-      if (!savedNote || !savedNote.id) {
-        throw new Error('노트 생성 실패: 유효하지 않은 응답')
-      }
-
-      console.log(`✅ 새 노트 생성 완료: ${savedNote.id}`)
-
-      // 🛡️ 상태 먼저 업데이트
-      note.value = { ...savedNote }
-      originalNote.value = JSON.parse(JSON.stringify(savedNote))
-
-      // 편집 모드로 전환
-      editorMode.value = 'edit'
-      currentNoteId.value = savedNote.id
-
-      // 🛡️ 라우트 변경
-      await router.replace(`/notes/${savedNote.id}`)
-
-    } else if (editorMode.value === 'edit') {
-      // ✅ 기존 노트 수정
-      console.log(`🔄 기존 노트 ${currentNoteId.value} 수정 중...`)
-
-      const noteData = {
-        title: note.value.title || 'Untitled',
-        content: note.value.content || '',
-        tags: note.value.tags || []
-      }
-
-      savedNote = await notesStore.updateNote(currentNoteId.value, noteData)
-
-      if (!savedNote || !savedNote.id) {
-        throw new Error('노트 수정 실패: 유효하지 않은 응답')
-      }
-
-      console.log(`✅ 기존 노트 수정 완료: ${savedNote.id}`)
-
-      // 상태 업데이트
-      note.value = { ...savedNote }
-      originalNote.value = JSON.parse(JSON.stringify(savedNote))
-    }
-
-    lastSaved.value = new Date()
-
-  } catch (saveError) {
-    console.error('❌ 노트 저장 실패:', saveError.message)
-
-    // 🚨 에러 타입별 처리
-    if (saveError.message.includes('같은 노트가 최근에 생성되었습니다')) {
-      alert('중복 저장 방지: 같은 노트가 최근에 생성되었습니다. 잠시 후 다시 시도해주세요.')
-    } else if (saveError.message.includes('Network Error') || saveError.message.includes('timeout')) {
-      alert('네트워크 연결을 확인하고 다시 시도해주세요.')
-    } else {
-      alert(`저장 실패: ${saveError.message}`)
-    }
-  } finally {
-    // 🛡️ 반드시 저장 상태 해제
-    saving.value = false
-    console.log('💾 저장 프로세스 완료')
-  }
-}
-
-const handleDelete = async () => {
-  if (editorMode.value !== 'edit') return
-
-  if (confirm(`"${note.value.title || 'Untitled'}"를 삭제하시겠습니까?`)) {
-    try {
-      await notesStore.deleteNote(currentNoteId.value)
-      router.push('/notes')
-    } catch (deleteError) {
-      console.error('노트 삭제 실패:', deleteError)
-      alert('삭제에 실패했습니다.')
-    }
-  }
-}
-
-// 태그 관련 함수들
+// 태그 관리
 const addTag = () => {
-  const tag = newTag.value.trim().replace(/^#/, '').toLowerCase()
+  const tag = newTag.value.trim().replace(/^#/, '')
   if (tag && !note.value.tags.includes(tag)) {
     note.value.tags.push(tag)
     newTag.value = ''
-    markAsChanged()
+    handleContentChange()
   }
 }
 
-const handleTagInput = (e) => {
-  if (e.key === ',' || e.key === ' ') {
-    e.preventDefault()
-    addTag()
-  }
+const removeTag = (tagToRemove) => {
+  note.value.tags = note.value.tags.filter(tag => tag !== tagToRemove)
+  handleContentChange()
 }
 
-const removeTag = (index) => {
-  note.value.tags.splice(index, 1)
-  markAsChanged()
-}
-
-// ✅ 간단한 자동저장 (eslint 에러 없음)
-const markAsChanged = () => {
-  // 🛡️ 저장 중이면 변경 감지 안함
-  if (saving.value) {
-    return
-  }
-
-  if (autoSave.value) {
+// 내용 변경 처리
+const handleContentChange = () => {
+  if (autoSave.value && !autoSavePending.value) {
     scheduleAutoSave()
   }
 }
 
+// 자동저장 스케줄링
 const scheduleAutoSave = () => {
-  // 🚫 저장 중이면 스케줄 안함
-  if (saving.value) {
-    console.log('🚫 저장 중이므로 자동저장 스케줄 안함')
-    return
-  }
-
-  // 🧹 기존 타이머들 완전 정리
+  // 기존 타이머 취소
   if (autoSaveTimeout.value) {
     clearTimeout(autoSaveTimeout.value)
     autoSaveTimeout.value = null
@@ -575,104 +438,138 @@ const scheduleAutoSave = () => {
     countdownInterval.value = null
   }
 
-  autoSavePending.value = false
-
-  // ✅ 간단한 저장 조건 판단
-  let shouldScheduleSave = false
-
-  if (editorMode.value === 'new') {
-    // 새 노트: 내용이 있어야 저장
-    shouldScheduleSave = note.value.content && note.value.content.trim().length > 2
-  } else if (editorMode.value === 'edit') {
-    // 기존 노트: 변경사항이 있으면 저장
-    shouldScheduleSave = hasUnsavedChanges.value
-  }
-
-  if (!shouldScheduleSave) {
-    return
-  }
-
-  // ✅ 안전한 카운트다운 시작
   autoSavePending.value = true
   autoSaveCountdown.value = 3
 
-  // 1초마다 카운트다운
+  // 카운트다운 시작
   countdownInterval.value = setInterval(() => {
-    autoSaveCountdown.value = Math.max(0, autoSaveCountdown.value - 1)
-
-    // 0에 도달하면 interval 정리
+    autoSaveCountdown.value--
     if (autoSaveCountdown.value <= 0) {
       clearInterval(countdownInterval.value)
       countdownInterval.value = null
     }
   }, 1000)
 
-  // 3초 후 저장 실행
+  // 3초 후 자동저장
   autoSaveTimeout.value = setTimeout(async () => {
-    // 🧹 정리
-    autoSavePending.value = false
-    if (countdownInterval.value) {
-      clearInterval(countdownInterval.value)
-      countdownInterval.value = null
+    try {
+      await handleSave(true) // 자동저장 플래그
+    } catch (autoSaveError) {
+      console.error('자동저장 실패:', autoSaveError)
+    } finally {
+      autoSavePending.value = false
+      autoSaveTimeout.value = null
     }
-
-    // 저장 조건 재확인
-    if (!hasUnsavedChanges.value || saving.value) {
-      console.log('⏭️ 자동저장 건너뜀: 변경사항 없음 또는 저장 중')
-      return
-    }
-
-    console.log('⏰ 자동저장 실행')
-    await handleSave()
   }, 3000)
 }
 
-const handleContentChange = () => {
-  markAsChanged()
+// 저장 처리
+const handleSave = async (isAutoSave = false) => {
+  if (saving.value) return
+
+  try {
+    saving.value = true
+
+    if (!isAutoSave) {
+      // 수동 저장 시 자동저장 타이머 취소
+      if (autoSaveTimeout.value) {
+        clearTimeout(autoSaveTimeout.value)
+        autoSaveTimeout.value = null
+      }
+      if (countdownInterval.value) {
+        clearInterval(countdownInterval.value)
+        countdownInterval.value = null
+      }
+      autoSavePending.value = false
+    }
+
+    let savedNote
+    if (editorMode.value === 'new') {
+      savedNote = await notesStore.createNote(note.value)
+      console.log('✅ 새 노트 생성 완료:', savedNote.id)
+
+      // 새 노트 생성 후 편집 모드로 전환
+      editorMode.value = 'edit'
+      currentNoteId.value = savedNote.id
+
+      // URL 업데이트 (히스토리 추가 없이)
+      router.replace(`/notes/${savedNote.id}`)
+    } else {
+      savedNote = await notesStore.updateNote(currentNoteId.value, note.value)
+      console.log('✅ 노트 수정 완료:', savedNote.id)
+    }
+
+    // 저장된 노트로 상태 업데이트
+    note.value = { ...savedNote }
+    originalNote.value = JSON.parse(JSON.stringify(savedNote))
+    lastSaved.value = new Date()
+
+    if (!isAutoSave) {
+      console.log('💾 수동 저장 완료')
+    }
+
+  } catch (saveError) {
+    console.error('❌ 저장 실패:', saveError)
+    alert(`저장에 실패했습니다: ${saveError.message}`)
+  } finally {
+    saving.value = false
+  }
 }
 
-const handleKeydown = (e) => {
-  // Ctrl+S: 저장
-  if (e.ctrlKey && e.key === 's') {
-    e.preventDefault()
-    handleSave()
-  }
+// 삭제 처리
+const handleDelete = async () => {
+  if (editorMode.value !== 'edit' || !currentNoteId.value) return
 
-  // Ctrl+1,2,3: 뷰 모드 변경
-  if (e.ctrlKey && e.key === '1') {
-    e.preventDefault()
-    setViewMode('edit')
-  }
-  if (e.ctrlKey && e.key === '2') {
-    e.preventDefault()
-    setViewMode('split')
-  }
-  if (e.ctrlKey && e.key === '3') {
-    e.preventDefault()
-    setViewMode('preview')
-  }
+  const confirmDelete = confirm(`정말로 노트 "${note.value.title}"를 삭제하시겠습니까?`)
+  if (!confirmDelete) return
 
-  // Tab: 들여쓰기 (Edit 모드일 때만)
-  if (e.key === 'Tab' && viewMode.value !== 'preview') {
-    e.preventDefault()
-    const start = e.target.selectionStart
-    const end = e.target.selectionEnd
-    const value = e.target.value
-
-    e.target.value = value.substring(0, start) + '  ' + value.substring(end)
-    e.target.selectionStart = e.target.selectionEnd = start + 2
-
-    note.value.content = e.target.value
-    markAsChanged()
+  try {
+    await notesStore.deleteNote(currentNoteId.value)
+    console.log('✅ 노트 삭제 완료')
+    router.push('/notes')
+  } catch (deleteError) {
+    console.error('❌ 삭제 실패:', deleteError)
+    alert(`삭제에 실패했습니다: ${deleteError.message}`)
   }
 }
 
+// 뒤로가기
+const handleBack = async () => {
+  if (hasUnsavedChanges.value) {
+    const userChoice = confirm('저장하지 않은 변경사항이 있습니다. 저장하고 이동하시겠습니까?')
+    if (userChoice) {
+      await handleSave()
+    }
+  }
+  router.push('/notes')
+}
+
+// 키보드 단축키
+const handleKeyboard = (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 's') {
+      e.preventDefault()
+      handleSave()
+    } else if (e.key === '1') {
+      e.preventDefault()
+      setViewMode('edit')
+    } else if (e.key === '2') {
+      e.preventDefault()
+      setViewMode('split')
+    } else if (e.key === '3') {
+      e.preventDefault()
+      setViewMode('preview')
+    }
+  }
+}
+
+// 뷰 모드 함수들
+// eslint-disable-next-line no-unused-vars
 const focusContent = () => {
   nextTick(() => {
     contentTextarea.value?.focus()
   })
 }
-
 const setViewMode = (mode) => {
   viewMode.value = mode
 
@@ -759,6 +656,9 @@ onMounted(async () => {
     viewMode.value = savedViewMode
   }
 
+  // 키보드 이벤트 리스너
+  window.addEventListener('keydown', handleKeyboard)
+
   // 페이지 떠날 때 저장 확인
   window.addEventListener('beforeunload', (e) => {
     if (hasUnsavedChanges.value) {
@@ -780,6 +680,9 @@ onUnmounted(() => {
     clearInterval(countdownInterval.value)
     countdownInterval.value = null
   }
+
+  // 이벤트 리스너 제거
+  window.removeEventListener('keydown', handleKeyboard)
 
   // 상태 리셋
   saving.value = false
