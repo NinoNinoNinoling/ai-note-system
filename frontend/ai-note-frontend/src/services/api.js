@@ -1,8 +1,11 @@
+// frontend/ai-note-frontend/src/services/api.js
+// 실제 백엔드 엔드포인트에 맞게 수정된 버전
+
 import axios from 'axios'
 
-// API 인스턴스 생성
+// API 인스턴스 생성 - 프록시 사용으로 baseURL 제거
 const api = axios.create({
-  baseURL: 'http://localhost:5000',
+  baseURL: '', // ✅ 프록시 사용을 위해 빈 문자열로 변경
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -32,14 +35,11 @@ api.interceptors.response.use(
 
     // 에러 메시지 표준화
     if (responseError.response) {
-      // 서버 응답이 있는 경우
       const message = responseError.response.data?.message || responseError.response.data?.error || 'Unknown server error'
       responseError.message = message
     } else if (responseError.request) {
-      // 요청은 보냈지만 응답이 없는 경우
       responseError.message = 'No response from server. Please check if the backend is running.'
     } else {
-      // 기타 에러
       responseError.message = responseError.message || 'Unknown error occurred'
     }
 
@@ -47,116 +47,197 @@ api.interceptors.response.use(
   }
 )
 
-// ✅ 노트 관련 API
-export const notesAPI = {
+// ✅ 노트 관련 API - 실제 백엔드 엔드포인트에 맞게 수정
+const notesAPI = {
   // 노트 목록 조회
-  getAll: (params = {}) => api.get('/api/', { params }),
+  getAll: (params = {}) => api.get('/api/notes', { params }),
 
   // 특정 노트 조회
-  getById: (id) => api.get(`/api/${id}`),
+  getById: (id) => api.get(`/api/notes/${id}`),
 
   // 노트 생성
   create: (noteData) => {
     console.log('📝 새 노트 생성 시작:', noteData.title)
-    return api.post('/api/', noteData)
+    return api.post('/api/notes', noteData)
   },
 
   // 노트 수정
   update: (id, noteData) => {
     console.log(`✏️ 노트 ${id} 수정 시작:`, noteData.title)
-    return api.put(`/api/${id}`, noteData)
-  },
-
-  // ✅ updateContent 함수 추가 (이게 누락되어서 에러 발생했음!)
-  updateContent: (id, data) => {
-    console.log(`📝 노트 ${id} 내용 업데이트`)
-    return api.put(`/api/${id}`, data)
+    return api.put(`/api/notes/${id}`, noteData)
   },
 
   // 노트 삭제
-  delete: (id) => api.delete(`/api/${id}`),
+  delete: (id) => {
+    console.log(`🗑️ 노트 ${id} 삭제 시작`)
+    return api.delete(`/api/notes/${id}`)
+  },
 
-  // 노트 검색 (RAG 지원)
-  search: (query, useRag = false) => api.post('/api/search', {
-    query,
-    use_rag: useRag
-  }),
-
-  // 유사한 노트 찾기
-  getSimilar: (id) => api.get(`/api/${id}/similar`),
-
-  // 노트 연결 그래프
-  getGraph: () => api.get('/api/graph'),
-
-  // 검색 자동완성
-  getSuggestions: (query) => api.get('/api/suggest', { params: { q: query } }),
+  // 노트 검색
+  search: (searchData) => {
+    console.log('🔍 노트 검색:', searchData.query)
+    return api.post('/api/notes/search', searchData)
+  },
 
   // 태그 목록 조회
-  getTags: () => api.get('/api/tags'),
+  getTags: () => api.get('/api/notes/tags'),
+
+  // 태그별 노트 조회
+  getByTag: (tag) => api.get(`/api/notes/tags/${tag}`),
+
+  // 최근 노트 조회
+  getRecent: (limit = 10) => api.get('/api/notes/recent', { params: { limit } }),
 
   // 노트 통계
-  getStats: () => api.get('/api/stats')
+  getStats: () => api.get('/api/notes/stats'),
+
+  // 노트 데이터 검증
+  validate: (noteData) => api.post('/api/notes/validate', noteData)
 }
 
-// ✅ AI 채팅 관련 API
-export const chatAPI = {
+// ✅ 채팅 관련 API - 실제 백엔드 엔드포인트에 맞게 수정
+const chatAPI = {
   // 기본 AI 채팅
-  chat: (message) => api.post('/api/', { message }),
+  chat: (message) => {
+    console.log('💬 기본 채팅 요청:', message)
+    return api.post('/api/', { message })
+  },
 
   // RAG 기반 채팅
-  ragChat: (message, useNotes = true) => api.post('/api/rag', {
-    message,
-    use_notes: useNotes
-  }),
+  ragChat: (message) => {
+    console.log('🧠 RAG 채팅 요청:', message)
+    return api.post('/api/rag', { message })
+  },
 
-  // Claude API 테스트
-  test: () => api.get('/api/test'),
+  // Claude API 연결 테스트
+  testClaude: () => api.get('/api/test'),
 
   // RAG 시스템 상태 확인
   ragStatus: () => api.get('/api/rag/status'),
 
   // RAG 인덱스 재구축
-  rebuildIndex: () => api.post('/api/rag/rebuild'),
+  ragRebuild: () => {
+    console.log('🔄 RAG 인덱스 재구축 시작')
+    return api.post('/api/rag/rebuild')
+  },
 
-  // RAG 전용 검색
-  ragSearch: (query, k = 5) => api.post('/api/rag/search', { query, k }),
+  // 채팅 히스토리 조회
+  getHistory: (limit = 50) => api.get('/api/history', { params: { limit } }),
 
-  // RAG 인덱스 삭제
-  clearIndex: () => api.delete('/api/rag/clear')
+  // 채팅 히스토리 검색
+  searchHistory: (query, limit = 10) => {
+    console.log('🔍 히스토리 검색:', query)
+    return api.post('/api/history/search', { query, limit })
+  },
+
+  // 채팅 히스토리 삭제
+  clearHistory: () => {
+    console.log('🗑️ 채팅 히스토리 삭제')
+    return api.delete('/api/history')
+  },
+
+  // 채팅 히스토리 내보내기
+  exportHistory: (startDate, endDate) => {
+    console.log('📤 히스토리 내보내기')
+    return api.post('/api/history/export', { start_date: startDate, end_date: endDate })
+  },
+
+  // 채팅 요약 통계
+  getSummary: (days = 7) => api.get('/api/history/summary', { params: { days } }),
+
+  // 채팅 통계
+  getStats: () => api.get('/api/stats'),
+
+  // 고급 통계
+  getAdvancedStats: () => api.get('/api/stats/advanced'),
+
+  // API 엔드포인트 목록
+  getEndpoints: () => api.get('/api/endpoints'),
+
+  // 디버그 정보
+  getDebugInfo: () => api.get('/api/debug/info')
+}
+
+// ✅ Multiple Chains API - 실제 백엔드 엔드포인트에 맞게 수정
+const chainsAPI = {
+  // 체인 정보 조회
+  getInfo: () => api.get('/api/chains'),
+
+  // 체인 상태 확인
+  getStatus: () => api.get('/api/chains/status'),
+
+  // 체인 테스트
+  test: () => api.post('/api/chains/test'),
+
+  // 노트 요약
+  summarize: (data) => {
+    console.log('📋 노트 요약 요청')
+    return api.post('/api/summarize', data)
+  },
+
+  // 노트 분석
+  analyze: (data) => {
+    console.log('🔍 노트 분석 요청')
+    return api.post('/api/analyze', data)
+  },
+
+  // 노트 개선 제안
+  improve: (data) => {
+    console.log('⚡ 노트 개선 요청')
+    return api.post('/api/improve', data)
+  },
+
+  // 관련 노트 추천
+  recommend: (data) => {
+    console.log('💡 노트 추천 요청')
+    return api.post('/api/recommend', data)
+  },
+
+  // 지식 공백 분석
+  getKnowledgeGaps: () => api.get('/api/knowledge-gaps'),
+
+  // 일괄 요약
+  batchSummarize: (data) => {
+    console.log('📋 일괄 요약 요청')
+    return api.post('/api/batch/summarize', data)
+  }
 }
 
 // ✅ 시스템 관련 API
-export const systemAPI = {
+const systemAPI = {
   // 헬스 체크
   health: () => api.get('/health'),
 
-  // 시스템 정보 (홈페이지)
-  info: () => api.get('/'),
+  // 홈 정보
+  home: () => api.get('/'),
 
-  // 디버그 - 라우트 목록
+  // 라우트 정보 (디버그)
   debugRoutes: () => api.get('/debug/routes'),
 
-  // 디버그 - 데이터베이스 상태
-  debugDatabase: () => api.get('/debug/database'),
-
-  // 디버그 - 샘플 노트 생성
-  createSampleNotes: () => api.post('/debug/sample-notes'),
-
-  // 유틸리티 - 마크다운 미리보기
-  markdownPreview: (content) => api.post('/utils/markdown', { content }),
-
-  // 시스템 설정 정보
+  // 설정 정보 (디버그)
   debugConfig: () => api.get('/debug/config'),
 
+  // 데이터베이스 정보 (디버그)
+  debugDatabase: () => api.get('/debug/database'),
+
+  // 샘플 노트 생성
+  createSampleNotes: () => {
+    console.log('📝 샘플 노트 생성 시작')
+    return api.post('/debug/sample-notes')
+  },
+
   // 활동 통계
-  getActivity: () => api.get('/utils/activity'),
+  getActivityStats: () => api.get('/utils/activity'),
 
   // 날짜 범위 정보
-  getDateRanges: () => api.get('/utils/date-ranges')
+  getDateRanges: () => api.get('/utils/date-ranges'),
+
+  // 마크다운 미리보기
+  markdownPreview: (content) => api.post('/utils/markdown', { content })
 }
 
 // ✅ 유틸리티 함수들
-export const apiUtils = {
+const apiUtils = {
   // 에러 메시지 추출
   getErrorMessage: (errorObj) => {
     if (errorObj.response?.data?.message) {
@@ -197,143 +278,46 @@ export const apiUtils = {
           throw retryError
         }
 
-        // 지연 시간 대기
         await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
       }
     }
   },
 
-  // 백엔드 엔드포인트 목록 확인
-  async getEndpoints() {
-    try {
-      const response = await systemAPI.debugRoutes()
-      console.log('📋 등록된 엔드포인트:', response.data)
-      return response.data
-    } catch (endpointError) {
-      console.error('❌ 엔드포인트 조회 실패:', endpointError.message)
-      return null
-    }
-  },
-
-  // RAG 시스템 테스트
-  async testRAG() {
-    try {
-      console.log('🧠 RAG 시스템 테스트 중...')
-
-      // RAG 상태 확인
-      const statusResponse = await chatAPI.ragStatus()
-      console.log('RAG 상태:', statusResponse.data)
-
-      if (!statusResponse.data.rag_status?.available) {
-        console.warn('⚠️ RAG 시스템이 비활성화되어 있습니다')
-        return false
-      }
-
-      // 간단한 RAG 검색 테스트
-      const searchResponse = await chatAPI.ragSearch('테스트', 3)
-      console.log('RAG 검색 결과:', searchResponse.data)
-
-      console.log('✅ RAG 시스템 테스트 성공')
-      return true
-
-    } catch (ragError) {
-      console.error('❌ RAG 시스템 테스트 실패:', ragError.message)
-      return false
-    }
-  },
-
-  // RAG 인덱스 관리
-  async manageRAGIndex(action = 'status') {
-    try {
-      switch (action) {
-        case 'status':
-          return await chatAPI.ragStatus()
-        case 'rebuild':
-          console.log('🔄 RAG 인덱스 재구축 중...')
-          return await chatAPI.rebuildIndex()
-        case 'clear':
-          console.log('🗑️ RAG 인덱스 삭제 중...')
-          return await chatAPI.clearIndex()
-        default:
-          throw new Error(`Unknown action: ${action}`)
-      }
-    } catch (manageError) {
-      console.error(`❌ RAG ${action} 실패:`, manageError.message)
-      throw manageError
-    }
-  },
-
-  // 단순화된 노트 생성
-  async createNoteSimple(noteData) {
-    try {
-      console.log(`📝 새 노트 생성: "${noteData.title}"`)
-
-      const response = await notesAPI.create(noteData)
-
-      if (response.data?.success && response.data?.note?.id) {
-        console.log(`✅ 노트 생성 성공 - ID: ${response.data.note.id}`)
-        return response.data.note
-      } else {
-        throw new Error('노트 생성 응답에 ID가 없습니다')
-      }
-
-    } catch (createError) {
-      console.error('❌ 노트 생성 실패:', createError.message)
-      throw createError
-    }
-  },
-
-  // 노트 생성 + 내용 업데이트 (기존 notes.js에서 사용하는 함수명)
+  // 노트 생성 + RAG 인덱싱 (통합 함수)
   async createAndIndexNote(noteData) {
     try {
-      console.log('🚀 노트 생성 + 내용 업데이트 시작')
+      console.log('📝 노트 생성 + RAG 인덱싱 시작')
 
-      // 1. 먼저 기본 노트 생성
-      const createResponse = await notesAPI.create({
-        title: noteData.title || 'Untitled',
-        content: noteData.content || '',
-        tags: noteData.tags || []
-      })
+      // 1. 노트 생성
+      const createResponse = await notesAPI.create(noteData)
+      const newNote = createResponse.data.note || createResponse.data
 
-      if (!createResponse.data?.success || !createResponse.data?.note?.id) {
-        throw new Error('노트 생성 실패')
-      }
+      console.log('✅ 노트 생성됨:', newNote.title)
 
-      const newNote = createResponse.data.note
-      console.log(`✅ 노트 생성 성공 - ID: ${newNote.id}`)
-
-      // 2. 추가 내용이 있다면 업데이트
-      if (noteData.content && noteData.content !== newNote.content) {
-        console.log(`🔄 노트 ${newNote.id} 내용 업데이트 중...`)
-
-        const updateResponse = await notesAPI.updateContent(newNote.id, {
-          title: noteData.title || newNote.title,
-          content: noteData.content,
-          tags: noteData.tags || newNote.tags || []
-        })
-
-        if (updateResponse.data?.success) {
-          console.log(`✅ 노트 ${newNote.id} 내용 업데이트 완료`)
-          return updateResponse.data.note
-        }
+      // 2. RAG 인덱스 자동 재구축 (백엔드에서 자동으로 하지만 확실히 하기 위해)
+      try {
+        await chatAPI.ragRebuild()
+        console.log('✅ RAG 인덱스 업데이트 완료')
+      } catch (ragError) {
+        console.warn('⚠️ RAG 인덱스 업데이트 실패 (노트는 생성됨):', ragError.message)
       }
 
       return newNote
-
-    } catch (createIndexError) {
-      console.error('❌ 노트 생성 + 업데이트 실패:', createIndexError.message)
-      throw createIndexError
+    } catch (error) {
+      console.error('❌ 노트 생성 실패:', error)
+      throw error
     }
   },
 
   // 전체 시스템 상태 확인
-  async checkSystemHealth() {
+  async checkSystemStatus() {
     try {
-      console.log('🏥 시스템 전체 상태 확인 중...')
+      console.log('🔍 시스템 상태 확인 중...')
 
       const results = {
         backend: false,
         database: false,
+        claude: false,
         rag: false,
         endpoints: null
       }
@@ -347,13 +331,13 @@ export const apiUtils = {
         console.log('❌ 백엔드: 연결 실패')
       }
 
-      // 2. 데이터베이스 확인
+      // 2. Claude API 확인
       try {
-        await systemAPI.debugDatabase()
-        results.database = true
-        console.log('✅ 데이터베이스: 정상')
+        const claudeResponse = await chatAPI.testClaude()
+        results.claude = claudeResponse.data?.status === 'success'
+        console.log(`${results.claude ? '✅' : '⚠️'} Claude API: ${results.claude ? '연결됨' : '연결 실패'}`)
       } catch {
-        console.log('❌ 데이터베이스: 연결 실패')
+        console.log('❌ Claude API: 테스트 실패')
       }
 
       // 3. RAG 시스템 확인
@@ -367,7 +351,7 @@ export const apiUtils = {
 
       // 4. 엔드포인트 목록 확인
       try {
-        const endpointsResponse = await systemAPI.debugRoutes()
+        const endpointsResponse = await chatAPI.getEndpoints()
         results.endpoints = endpointsResponse.data
         console.log('✅ 엔드포인트: 정상')
       } catch {
@@ -384,30 +368,34 @@ export const apiUtils = {
   }
 }
 
-// ✅ 통합 API 객체 (주요 기능만 포함)
+// ✅ 통합 API 객체
 const mainAPI = {
   // 노트 API
-  ...notesAPI,
+  notes: notesAPI,
 
   // 채팅 API
-  chat: chatAPI.chat,
-  ragChat: chatAPI.ragChat,
-  testChat: chatAPI.test,
+  chat: chatAPI,
 
-  // RAG API
-  ragStatus: chatAPI.ragStatus,
-  ragRebuild: chatAPI.rebuildIndex,
-  ragSearch: chatAPI.ragSearch,
-  ragClear: chatAPI.clearIndex,
+  // 체인 API
+  chains: chainsAPI,
 
   // 시스템 API
-  health: systemAPI.health,
-  debugRoutes: systemAPI.debugRoutes,
-  debugDatabase: systemAPI.debugDatabase,
-  createSamples: systemAPI.createSampleNotes,
+  system: systemAPI,
 
   // 유틸리티
-  utils: apiUtils
+  utils: apiUtils,
+
+  // 자주 사용하는 기능들 (단축 접근)
+  // 기본 채팅
+  sendMessage: chatAPI.chat,
+  // RAG 채팅
+  sendRAGMessage: chatAPI.ragChat,
+  // 노트 생성
+  createNote: notesAPI.create,
+  // 노트 목록
+  getNotes: notesAPI.getAll,
+  // 시스템 상태
+  checkHealth: systemAPI.health
 }
 
 // Mock 데이터 (개발/테스트용)
@@ -424,7 +412,7 @@ export const mockData = {
     {
       id: 2,
       title: "AI 프로젝트 아이디어",
-      content: "# AI 프로젝트 계획\n\n## LangChain 활용\n- RAG 시스템 구축\n- 문서 기반 QA\n\n## 기술 스택\n- Python + Flask\n- Vue.js\n- OpenAI API",
+      content: "# AI 프로젝트 계획\n\n## LangChain 활용\n- RAG 시스템 구축\n- 문서 기반 QA\n\n## 기술 스택\n- Python + Flask\n- Vue.js\n- Claude API",
       tags: ["ai", "langchain", "project"],
       created_at: "2024-01-14T09:15:00Z",
       updated_at: "2024-01-16T11:20:00Z"
@@ -447,7 +435,10 @@ export const mockData = {
 export const isDevelopment = import.meta.env.DEV
 
 // Mock 모드 설정 (백엔드가 없을 때 사용)
-export const useMockData = false // true로 설정하면 Mock 데이터 사용
+export const useMockData = false
 
 // 기본 export
 export default mainAPI
+
+// 개별 export (필요시 개별 임포트 가능)
+export { notesAPI, chatAPI, chainsAPI, systemAPI, apiUtils }
