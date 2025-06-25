@@ -1,12 +1,13 @@
 # backend/app/services/chat_service.py
 """
-ChatService - 채팅 관련 비즈니스 로직 (RAG 연결 완료)
+완전한 ChatService - 모든 메서드 구현 완료
 
-RAG 시스템과 완전히 연결된 ChatController 호환 메서드들
+모든 미구현 기능 + 헬퍼 메서드 포함
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional
 from config.settings import Config
 from models.note import ChatHistory, Note
 from config.database import db
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChatService:
-    """채팅 서비스 클래스"""
+    """완성된 채팅 서비스 클래스"""
     
     def __init__(self):
         self.api_key = Config.ANTHROPIC_API_KEY
@@ -53,7 +54,7 @@ class ChatService:
             "ai_response": ai_result["response"],
             "model": ai_result["model"],
             "success": ai_result["success"],
-            "timestamp": datetime.now().isoformat()
+            "timestamp": self._get_timestamp()
         }
         
         # 히스토리 저장
@@ -146,7 +147,7 @@ class ChatService:
             ],
             "context_length": len(context),
             "search_query": message,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": self._get_timestamp()
         }
         
         # 히스토리 저장
@@ -172,11 +173,11 @@ class ChatService:
                 "vector_store": {
                     "indexed_notes": rag_stats["indexed_notes"],
                     "vector_count": rag_stats["vector_count"],
-                    "last_updated": datetime.now().isoformat() if rag_stats["indexed_notes"] > 0 else None
+                    "last_updated": self._get_timestamp() if rag_stats["indexed_notes"] > 0 else None
                 },
                 "embeddings_model": rag_stats["model_name"],
                 "model_dimension": rag_stats["dimension"],
-                "timestamp": datetime.now().isoformat()
+                "timestamp": self._get_timestamp()
             }
             
         except Exception as e:
@@ -191,7 +192,7 @@ class ChatService:
                     "last_updated": None
                 },
                 "embeddings_model": None,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": self._get_timestamp()
             }
     
     def rebuild_rag_index(self) -> dict:
@@ -202,7 +203,7 @@ class ChatService:
                     "status": "error",
                     "message": "RAG 시스템이 사용 불가능합니다",
                     "progress": 0,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": self._get_timestamp()
                 }
             
             # 모든 노트 조회
@@ -227,14 +228,14 @@ class ChatService:
                     "message": f"RAG 인덱스 재구축 완료: {len(note_data)}개 노트 처리",
                     "progress": 100,
                     "indexed_notes": len(note_data),
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": self._get_timestamp()
                 }
             else:
                 return {
                     "status": "error",
                     "message": "RAG 인덱스 재구축 실패",
                     "progress": 0,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": self._get_timestamp()
                 }
                 
         except Exception as e:
@@ -243,7 +244,7 @@ class ChatService:
                 "status": "error",
                 "message": f"인덱스 재구축 중 오류: {str(e)}",
                 "progress": 0,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": self._get_timestamp()
             }
     
     def test_claude_connection(self) -> dict:
@@ -284,8 +285,12 @@ class ChatService:
                 "mock_available": True
             }
     
+    # =========================
+    # ✅ 모든 히스토리 기능 구현
+    # =========================
+    
     def get_chat_history(self, limit: int = 20) -> list:
-        """채팅 히스토리 조회"""
+        """채팅 히스토리 조회 (실제 구현)"""
         try:
             chat_records = ChatHistory.query.order_by(
                 ChatHistory.created_at.desc()
@@ -296,6 +301,234 @@ class ChatService:
         except Exception as e:
             logger.error(f"Chat history error: {str(e)}")
             return []
+    
+    def clear_chat_history(self) -> int:
+        """✅ 채팅 히스토리 삭제 (완전 구현)"""
+        try:
+            # 모든 채팅 기록 개수 조회
+            total_count = ChatHistory.query.count()
+            
+            # 모든 채팅 기록 삭제
+            ChatHistory.query.delete()
+            db.session.commit()
+            
+            logger.info(f"채팅 히스토리 {total_count}개 삭제 완료")
+            return total_count
+            
+        except Exception as e:
+            logger.error(f"채팅 히스토리 삭제 실패: {e}")
+            db.session.rollback()
+            return 0
+    
+    def get_chat_stats(self) -> dict:
+        """✅ 채팅 통계 정보 (완전 구현)"""
+        try:
+            # 기본 통계
+            total_chats = ChatHistory.query.count()
+            
+            # 최근 7일 채팅 수
+            week_ago = datetime.now() - timedelta(days=7)
+            recent_chats = ChatHistory.query.filter(
+                ChatHistory.created_at >= week_ago
+            ).count()
+            
+            # 오늘 채팅 수
+            today = datetime.now().date()
+            today_chats = ChatHistory.query.filter(
+                db.func.date(ChatHistory.created_at) == today
+            ).count()
+            
+            # 모델별 사용 통계
+            model_stats = {}
+            model_results = db.session.query(
+                ChatHistory.model_used,
+                db.func.count(ChatHistory.id).label('count')
+            ).group_by(ChatHistory.model_used).all()
+            
+            for model, count in model_results:
+                model_stats[model or 'Unknown'] = count
+            
+            # 평균 응답 길이 (최근 100개)
+            recent_responses = ChatHistory.query.order_by(
+                ChatHistory.created_at.desc()
+            ).limit(100).all()
+            
+            avg_response_length = 0
+            if recent_responses:
+                total_length = sum(len(chat.ai_response or '') for chat in recent_responses)
+                avg_response_length = round(total_length / len(recent_responses))
+            
+            return {
+                "total_chats": total_chats,
+                "recent_chats_7d": recent_chats,
+                "today_chats": today_chats,
+                "model_usage": model_stats,
+                "average_response_length": avg_response_length,
+                "rag_enabled": rag_chain.is_available(),
+                "claude_connected": bool(self.api_key),
+                "last_chat": recent_responses[0].created_at.isoformat() if recent_responses else None,
+                "timestamp": self._get_timestamp()
+            }
+            
+        except Exception as e:
+            logger.error(f"채팅 통계 조회 실패: {e}")
+            return {
+                "total_chats": 0,
+                "error": f"통계 조회 실패: {str(e)}",
+                "timestamp": self._get_timestamp()
+            }
+    
+    def search_chat_history(self, query: str, limit: int = 10) -> list:
+        """✅ 채팅 히스토리 검색 (새로 구현)"""
+        try:
+            if not query or not query.strip():
+                return []
+            
+            query_pattern = f"%{query.strip()}%"
+            
+            # 사용자 메시지나 AI 응답에서 검색
+            results = ChatHistory.query.filter(
+                db.or_(
+                    ChatHistory.user_message.ilike(query_pattern),
+                    ChatHistory.ai_response.ilike(query_pattern)
+                )
+            ).order_by(
+                ChatHistory.created_at.desc()
+            ).limit(limit).all()
+            
+            return [chat.to_dict() for chat in results]
+            
+        except Exception as e:
+            logger.error(f"채팅 히스토리 검색 실패: {e}")
+            return []
+    
+    def export_chat_history(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
+        """✅ 채팅 히스토리 내보내기 (새로 구현)"""
+        try:
+            query = ChatHistory.query
+            
+            # 날짜 필터링
+            if start_date:
+                start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                query = query.filter(ChatHistory.created_at >= start_dt)
+            
+            if end_date:
+                end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                query = query.filter(ChatHistory.created_at <= end_dt)
+            
+            # 모든 채팅 기록 조회
+            chat_records = query.order_by(ChatHistory.created_at.asc()).all()
+            
+            # 내보내기 데이터 구성
+            export_data = {
+                "export_info": {
+                    "generated_at": self._get_timestamp(),
+                    "total_records": len(chat_records),
+                    "date_range": {
+                        "start": start_date,
+                        "end": end_date
+                    }
+                },
+                "chat_history": [
+                    {
+                        "id": chat.id,
+                        "user_message": chat.user_message,
+                        "ai_response": chat.ai_response,
+                        "model_used": chat.model_used,
+                        "created_at": chat.created_at.isoformat(),
+                        "response_length": len(chat.ai_response or ''),
+                        "message_length": len(chat.user_message or '')
+                    }
+                    for chat in chat_records
+                ]
+            }
+            
+            return {
+                "success": True,
+                "data": export_data,
+                "message": f"{len(chat_records)}개의 채팅 기록을 내보냈습니다"
+            }
+            
+        except Exception as e:
+            logger.error(f"채팅 히스토리 내보내기 실패: {e}")
+            return {
+                "success": False,
+                "error": f"내보내기 실패: {str(e)}"
+            }
+    
+    def get_chat_summary(self, days: int = 7) -> dict:
+        """✅ 채팅 요약 통계 (새로 구현)"""
+        try:
+            # 지정된 기간의 채팅 기록
+            since_date = datetime.now() - timedelta(days=days)
+            
+            chats = ChatHistory.query.filter(
+                ChatHistory.created_at >= since_date
+            ).all()
+            
+            if not chats:
+                return {
+                    "period_days": days,
+                    "total_chats": 0,
+                    "message": f"최근 {days}일간 채팅 기록이 없습니다"
+                }
+            
+            # 일별 채팅 수
+            daily_counts = {}
+            for chat in chats:
+                date_key = chat.created_at.date().isoformat()
+                daily_counts[date_key] = daily_counts.get(date_key, 0) + 1
+            
+            # 시간대별 채팅 수 (0-23시)
+            hourly_counts = {}
+            for chat in chats:
+                hour_key = chat.created_at.hour
+                hourly_counts[hour_key] = hourly_counts.get(hour_key, 0) + 1
+            
+            # 가장 활발한 시간대
+            peak_hour = max(hourly_counts.items(), key=lambda x: x[1]) if hourly_counts else (0, 0)
+            
+            # 평균 메시지 길이
+            total_user_length = sum(len(chat.user_message or '') for chat in chats)
+            total_ai_length = sum(len(chat.ai_response or '') for chat in chats)
+            
+            avg_user_length = round(total_user_length / len(chats)) if chats else 0
+            avg_ai_length = round(total_ai_length / len(chats)) if chats else 0
+            
+            return {
+                "period_days": days,
+                "total_chats": len(chats),
+                "daily_average": round(len(chats) / days, 1),
+                "daily_counts": daily_counts,
+                "hourly_distribution": hourly_counts,
+                "peak_hour": {
+                    "hour": peak_hour[0],
+                    "count": peak_hour[1]
+                },
+                "message_stats": {
+                    "avg_user_message_length": avg_user_length,
+                    "avg_ai_response_length": avg_ai_length,
+                    "total_user_characters": total_user_length,
+                    "total_ai_characters": total_ai_length
+                },
+                "first_chat": chats[-1].created_at.isoformat() if chats else None,
+                "last_chat": chats[0].created_at.isoformat() if chats else None
+            }
+            
+        except Exception as e:
+            logger.error(f"채팅 요약 통계 실패: {e}")
+            return {
+                "error": f"요약 통계 생성 실패: {str(e)}",
+                "period_days": days
+            }
+    
+    # =========================
+    # ✅ 헬퍼 메서드들
+    # =========================
+    
+    def _get_timestamp(self) -> str:
+        """✅ 타임스탬프 생성 헬퍼 (새로 추가)"""
+        return datetime.now().isoformat()
     
     def _get_claude_response(self, message: str) -> dict:
         """Claude API 호출"""
