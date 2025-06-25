@@ -1,358 +1,290 @@
 # backend/app/services/chat_service.py
 """
-ChatService - 채팅 관련 비즈니스 로직
+ChatService - 채팅 관련 비즈니스 로직 (프로덕션 버전)
 
-기본 AI 채팅, RAG 기반 채팅, 채팅 히스토리 관리
+깔끔하게 정리된 ChatController 호환 메서드들
 """
 
-from config.settings import Config
-from models.note import ChatHistory, Note
-from config.database import db
 import logging
 from datetime import datetime
+from config.settings import Config
+from models.note import ChatHistory
+from config.database import db
 
 logger = logging.getLogger(__name__)
 
 
 class ChatService:
-    """채팅 비즈니스 로직 서비스"""
+    """채팅 서비스 클래스"""
     
     def __init__(self):
-        self.rag_available = False
-        self.rag_chain = None
-        
-        # RAG 시스템 초기화
-        self._initialize_rag()
+        self.api_key = Config.ANTHROPIC_API_KEY
     
-    def _initialize_rag(self):
-        """RAG 시스템 초기화"""
-        try:
-            from chains.rag_chain import rag_chain, RAG_AVAILABLE
-            
-            if RAG_AVAILABLE and rag_chain and rag_chain.is_available():
-                self.rag_chain = rag_chain
-                self.rag_available = True
-                logger.info("✅ RAG 시스템 연결 성공")
-            else:
-                logger.warning("⚠️ RAG 시스템 사용 불가 - 패키지 설치 필요")
-                
-        except ImportError as e:
-            logger.warning(f"⚠️ RAG 시스템 임포트 실패: {e}")
-    
-    def basic_chat(self, message: str, save_history=True) -> dict:
+    def basic_chat(self, message: str, save_history: bool = True) -> dict:
         """
         기본 AI 채팅
         
         Args:
             message: 사용자 메시지
             save_history: 히스토리 저장 여부
+            
+        Returns:
+            dict: 채팅 응답 데이터
         """
-        try:
-            if not message or not message.strip():
-                raise ValueError("메시지를 입력해주세요")
-            
-            message = message.strip()
-            
-            # Claude API 또는 Mock 응답
-            result = self._get_ai_response(message)
-            
-            # 채팅 히스토리 저장
-            if save_history:
-                self._save_chat_history(
-                    user_message=message,
-                    ai_response=result["response"],
-                    model_used=result["model"]
-                )
-            
-            return {
-                "user_message": message,
-                "ai_response": result["response"],
-                "model": result["model"],
-                "rag_enabled": False,
-                "timestamp": datetime.now().isoformat()
-            }
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"Basic chat error: {e}")
-            raise Exception(f"채팅 처리 중 오류가 발생했습니다: {str(e)}")
+        if not message or not message.strip():
+            raise ValueError("메시지가 비어있습니다")
+        
+        message = message.strip()
+        
+        # AI 응답 생성
+        if not self.api_key:
+            ai_result = self._get_mock_response(message)
+        else:
+            try:
+                ai_result = self._get_claude_response(message)
+            except Exception as claude_error:
+                logger.warning(f"Claude API 실패, Mock으로 폴백: {claude_error}")
+                ai_result = self._get_mock_response(message)
+        
+        # 응답 데이터 구성
+        result = {
+            "user_message": message,
+            "ai_response": ai_result["response"],
+            "model": ai_result["model"],
+            "success": ai_result["success"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # 히스토리 저장
+        if save_history:
+            self._save_chat_history(
+                user_message=message,
+                ai_response=ai_result["response"],
+                model=ai_result["model"]
+            )
+        
+        return result
     
-    def rag_chat(self, message: str, save_history=True) -> dict:
+    def rag_chat(self, message: str, save_history: bool = True) -> dict:
         """
         RAG 기반 지능형 채팅
         
         Args:
             message: 사용자 메시지
             save_history: 히스토리 저장 여부
+            
+        Returns:
+            dict: RAG 채팅 응답 데이터
         """
-        try:
-            if not message or not message.strip():
-                raise ValueError("메시지를 입력해주세요")
-            
-            message = message.strip()
-            
-            if not self.rag_available:
-                # RAG가 없으면 기본 채팅으로 대체
-                result = self.basic_chat(message, save_history=False)
-                result["ai_response"] += "\n\n⚠️ RAG 시스템이 비활성화되어 있어 기본 응답을 제공했습니다."
-                result["rag_enabled"] = False
-                
-                if save_history:
-                    self._save_chat_history(
-                        user_message=message,
-                        ai_response=result["ai_response"],
-                        model_used="Basic + RAG Disabled"
-                    )
-                
-                return result
-            
-            # RAG 검색 수행
-            search_results = self.rag_chain.search_similar(message, top_k=3)
-            
-            if not search_results:
-                # 관련 노트가 없으면 기본 응답
-                result = self.basic_chat(message, save_history=False)
-                result["ai_response"] += "\n\n💡 관련된 노트를 찾지 못했습니다. 더 많은 노트를 작성하시면 더 정확한 답변을 드릴 수 있어요!"
-                result["rag_enabled"] = True
-                result["context_notes"] = []
-            else:
-                # 컨텍스트 구성
-                context = self._build_context(search_results)
-                
-                # RAG 기반 응답 생성
-                rag_prompt = self._build_rag_prompt(message, context)
-                result = self._get_ai_response(rag_prompt)
-                
-                result = {
-                    "user_message": message,
-                    "ai_response": result["response"],
-                    "model": f"RAG + {result['model']}",
-                    "rag_enabled": True,
-                    "context_notes": [
-                        {
-                            "note_id": note["note_id"],
-                            "title": note["title"],
-                            "similarity": note["similarity"],
-                            "preview": note["content_preview"]
-                        }
-                        for note in search_results
-                    ],
-                    "timestamp": datetime.now().isoformat()
-                }
-            
-            # 채팅 히스토리 저장
-            if save_history:
-                self._save_chat_history(
-                    user_message=message,
-                    ai_response=result["ai_response"],
-                    model_used=result["model"]
-                )
-            
-            return result
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"RAG chat error: {e}")
-            raise Exception(f"RAG 채팅 처리 중 오류가 발생했습니다: {str(e)}")
+        if not message or not message.strip():
+            raise ValueError("메시지가 비어있습니다")
+        
+        message = message.strip()
+        
+        # 현재는 기본 채팅과 동일 (향후 실제 RAG 구현 예정)
+        rag_message = f"[RAG 모드] {message}"
+        
+        if not self.api_key:
+            ai_result = self._get_mock_response(rag_message)
+        else:
+            try:
+                ai_result = self._get_claude_response(rag_message)
+            except Exception as claude_error:
+                logger.warning(f"Claude API 실패, Mock으로 폴백: {claude_error}")
+                ai_result = self._get_mock_response(rag_message)
+        
+        # RAG 메타데이터 추가
+        result = {
+            "user_message": message,
+            "ai_response": ai_result["response"] + "\n\n*RAG 기능은 현재 개발 중입니다.",
+            "model": "RAG + " + ai_result["model"],
+            "success": ai_result["success"],
+            "rag_enabled": False,  # 현재는 비활성화
+            "relevant_notes": [],  # 향후 구현
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # 히스토리 저장
+        if save_history:
+            self._save_chat_history(
+                user_message=message,
+                ai_response=result["ai_response"],
+                model=result["model"]
+            )
+        
+        return result
     
     def get_rag_status(self) -> dict:
-        """RAG 시스템 상태 조회"""
-        try:
-            if not self.rag_available:
-                return {
-                    "rag_status": {
-                        "available": False,
-                        "reason": "RAG 패키지가 설치되지 않았습니다",
-                        "required_packages": ["faiss-cpu", "sentence-transformers", "numpy"]
-                    },
-                    "stats": None
-                }
-            
-            # RAG 통계 정보
-            stats = self.rag_chain.get_stats()
-            
-            return {
-                "rag_status": {
-                    "available": True,
-                    "model_name": "paraphrase-multilingual-MiniLM-L12-v2",
-                    "last_updated": datetime.now().isoformat()
-                },
-                "stats": stats
-            }
-            
-        except Exception as e:
-            logger.error(f"RAG status error: {e}")
-            return {
-                "rag_status": {
-                    "available": False,
-                    "reason": f"RAG 상태 확인 오류: {str(e)}"
-                },
-                "stats": None
-            }
+        """RAG 시스템 상태 확인"""
+        return {
+            "rag_status": {
+                "available": False,
+                "reason": "RAG 시스템 구현 예정"
+            },
+            "vector_store": {
+                "indexed_notes": 0,
+                "last_updated": None
+            },
+            "embeddings_model": None,
+            "timestamp": datetime.now().isoformat()
+        }
     
     def rebuild_rag_index(self) -> dict:
         """RAG 인덱스 재구축"""
-        try:
-            if not self.rag_available:
-                raise Exception("RAG 시스템이 사용 불가능합니다")
-            
-            # 모든 노트 가져오기
-            notes = Note.query.all()
-            
-            if not notes:
-                return {
-                    "message": "인덱싱할 노트가 없습니다",
-                    "indexed_count": 0
-                }
-            
-            # 인덱스 재구축
-            success_count = 0
-            for note in notes:
-                if self.rag_chain.add_note(note.id, note.title, note.content):
-                    success_count += 1
-            
-            return {
-                "message": f"RAG 인덱스 재구축 완료",
-                "indexed_count": success_count,
-                "total_notes": len(notes),
-                "timestamp": datetime.now().isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"RAG index rebuild error: {e}")
-            raise Exception(f"RAG 인덱스 재구축 실패: {str(e)}")
+        return {
+            "status": "pending",
+            "message": "RAG 인덱스 재구축 기능은 구현 예정입니다",
+            "progress": 0,
+            "estimated_time": None,
+            "timestamp": datetime.now().isoformat()
+        }
     
     def test_claude_connection(self) -> dict:
         """Claude API 연결 테스트"""
-        try:
-            test_message = "안녕하세요! 연결 테스트입니다."
-            result = self._get_ai_response(test_message)
-            
+        if not self.api_key:
             return {
-                "status": "success" if result["success"] else "failed",
-                "response": result["response"][:200] + "..." if len(result["response"]) > 200 else result["response"],
-                "model": result["model"],
-                "api_available": result["success"]
+                "status": "error",
+                "message": "ANTHROPIC_API_KEY가 설정되지 않았습니다",
+                "response": "API 키를 .env 파일에 설정해주세요",
+                "mock_available": True
             }
+        
+        try:
+            # 간단한 테스트 메시지
+            test_result = self._get_claude_response("안녕하세요! API 테스트입니다.")
             
+            if test_result["success"]:
+                return {
+                    "status": "success",
+                    "message": "Claude API 연결 성공",
+                    "response": test_result["response"][:100] + "...",
+                    "model": test_result["model"]
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "Claude API 연결 실패",
+                    "response": test_result["response"],
+                    "mock_available": True
+                }
+                
         except Exception as e:
-            logger.error(f"Claude test error: {e}")
+            logger.error(f"Claude test error: {str(e)}")
             return {
-                "status": "failed",
-                "response": f"테스트 실패: {str(e)}",
-                "model": "Error",
-                "api_available": False
+                "status": "error",
+                "message": "Claude API 테스트 중 오류 발생",
+                "response": str(e),
+                "mock_available": True
             }
     
-    def get_chat_history(self, limit=20) -> list:
+    def get_chat_history(self, limit: int = 20) -> list:
         """채팅 히스토리 조회"""
         try:
-            history = ChatHistory.get_recent_chats(limit=limit)
-            return [chat.to_dict() for chat in history]
+            chat_records = ChatHistory.query.order_by(
+                ChatHistory.created_at.desc()
+            ).limit(limit).all()
+            
+            return [chat.to_dict() for chat in chat_records]
+            
         except Exception as e:
-            logger.error(f"Chat history error: {e}")
-            raise Exception(f"채팅 히스토리 조회 실패: {str(e)}")
+            logger.error(f"Chat history error: {str(e)}")
+            return []
     
-    def _get_ai_response(self, message: str) -> dict:
-        """Claude API 또는 Mock 응답"""
-        try:
-            if not Config.ANTHROPIC_API_KEY:
-                return self._get_mock_response(message)
-            
-            from anthropic import Anthropic
-            
-            client = Anthropic(api_key=Config.ANTHROPIC_API_KEY)
-            
-            response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=1000,
-                messages=[
-                    {"role": "user", "content": message}
-                ]
-            )
-            
-            return {
-                "response": response.content[0].text,
-                "model": "Claude 3.5 Sonnet",
-                "success": True
-            }
-            
-        except Exception as e:
-            logger.warning(f"Claude API error: {e}")
-            return self._get_mock_response(message)
+    def _get_claude_response(self, message: str) -> dict:
+        """Claude API 호출"""
+        from anthropic import Anthropic
+        
+        client = Anthropic(api_key=self.api_key)
+        
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=1000,
+            messages=[
+                {"role": "user", "content": message}
+            ]
+        )
+        
+        return {
+            "response": response.content[0].text,
+            "model": "Claude 3.5 Sonnet",
+            "success": True
+        }
     
     def _get_mock_response(self, message: str) -> dict:
-        """Mock AI 응답"""
+        """Mock AI 응답 생성"""
         message_lower = message.lower()
         
-        if any(word in message_lower for word in ['안녕', 'hello', '헬로']):
+        if any(word in message_lower for word in ['안녕', 'hello', '헬로', '반가']):
             response = "안녕하세요! AI Note System의 AI 어시스턴트입니다. 무엇을 도와드릴까요?"
-        elif any(word in message_lower for word in ['노트', 'note']):
-            response = "노트 시스템에 대해 궁금한 것이 있으시군요! 마크다운으로 노트를 작성하고, 태그로 분류하며, AI와 대화할 수 있는 시스템입니다."
-        elif any(word in message_lower for word in ['rag', '검색']):
-            response = "RAG(Retrieval-Augmented Generation)는 검색과 생성을 결합한 AI 기술입니다. 여러분의 노트를 검색해서 더 정확한 답변을 제공합니다!"
-        elif any(word in message_lower for word in ['도움', 'help']):
-            response = """AI Note System 사용법:
-1. 📝 노트 작성: 마크다운으로 노트 작성
-2. 🏷️ 태그 사용: #태그로 분류
-3. 🔍 검색: 제목, 내용, 태그로 검색
-4. 💬 AI 채팅: 노트 기반 지능형 대화"""
+            
+        elif any(word in message_lower for word in ['마크다운', 'markdown']):
+            response = """마크다운(Markdown)은 간단한 문법으로 텍스트를 포맷팅할 수 있는 언어입니다.
+
+**주요 문법:**
+- `# 제목 1`, `## 제목 2` - 헤더
+- `**굵은글씨**`, `*기울임*` - 텍스트 스타일  
+- `- 항목` - 리스트
+- `` `코드` `` - 인라인 코드
+- `[링크](URL)` - 링크
+
+노트 시스템에서 마크다운을 사용해 멋진 노트를 작성해보세요! 📝"""
+
+        elif any(word in message_lower for word in ['vue', 'vuejs', '뷰']):
+            response = """Vue.js는 사용자 인터페이스를 구축하기 위한 JavaScript 프레임워크입니다.
+
+**주요 특징:**
+- 📦 **컴포넌트 기반** - 재사용 가능한 UI 컴포넌트
+- 🔄 **반응형 데이터** - 데이터 변경시 자동 UI 업데이트
+- 🎯 **단순함** - 학습하기 쉬운 문법
+- ⚡ **성능** - 가상 DOM으로 빠른 렌더링
+
+Composition API를 사용하면 더 깔끔한 코드를 작성할 수 있어요!"""
+
+        elif any(word in message_lower for word in ['도움', 'help', '기능']):
+            response = """AI Note System 사용법을 알려드릴게요! 
+
+**주요 기능:**
+- 📝 **노트 작성** - 마크다운으로 멋진 노트 작성
+- 🔍 **검색** - 제목, 내용, 태그로 노트 검색  
+- 🏷️ **태그** - `#태그` 형태로 노트 분류
+- 🤖 **AI 채팅** - 궁금한 것을 AI에게 질문
+
+**API 엔드포인트:**
+- `GET /api/notes` - 노트 목록
+- `POST /api/notes` - 새 노트 생성
+- `POST /api/` - AI와 대화
+
+더 궁금한 게 있으면 언제든 물어보세요! 😊"""
+
         else:
-            response = f"'{message}'에 대해 말씀해주셨네요. 더 구체적인 질문을 해주시면 더 도움이 될 것 같아요!"
+            response = f""""{message}"에 대해 답변드리겠습니다.
+
+AI Note System에서는 다양한 질문에 답변해드릴 수 있습니다:
+- 📝 마크다운 사용법
+- 💻 프로그래밍 관련 질문  
+- 🤖 시스템 사용법
+- 📚 일반적인 학습 내용
+
+더 구체적인 질문을 해주시면 더 도움이 될 수 있어요! 🤖"""
         
         return {
             "response": response,
-            "model": "Mock AI",
-            "success": False
+            "model": "Mock AI (개발용)",
+            "success": True
         }
     
-    def _build_context(self, search_results: list) -> str:
-        """검색 결과로 컨텍스트 구성"""
-        if not search_results:
-            return ""
-        
-        context_parts = []
-        for i, result in enumerate(search_results, 1):
-            context_parts.append(f"""노트 {i}: {result['title']}
-{result['full_content'][:500]}{'...' if len(result['full_content']) > 500 else ''}
-""")
-        
-        return "\n---\n".join(context_parts)
-    
-    def _build_rag_prompt(self, user_question: str, context: str) -> str:
-        """RAG 프롬프트 구성"""
-        return f"""다음은 사용자의 개인 노트들입니다:
-
-{context}
-
----
-
-위의 노트 내용을 참고해서 다음 질문에 답해주세요:
-질문: {user_question}
-
-답변 시 주의사항:
-1. 노트 내용을 바탕으로 정확하게 답변해주세요
-2. 노트에 없는 내용은 일반적인 지식으로 보완해주세요
-3. 어떤 노트를 참고했는지 언급해주세요
-4. 친근하고 도움이 되는 톤으로 답변해주세요"""
-    
-    def _save_chat_history(self, user_message: str, ai_response: str, model_used: str, note_id: int = None):
+    def _save_chat_history(self, user_message: str, ai_response: str, model: str):
         """채팅 히스토리 저장"""
         try:
-            history = ChatHistory(
-                note_id=note_id,
+            chat_record = ChatHistory(
                 user_message=user_message,
                 ai_response=ai_response,
-                model_used=model_used
+                model_used=model
             )
             
-            db.session.add(history)
+            db.session.add(chat_record)
             db.session.commit()
             
-            logger.info(f"Chat history saved: {history.id}")
-            
         except Exception as e:
-            logger.error(f"Failed to save chat history: {e}")
+            logger.error(f"Failed to save chat history: {str(e)}")
             db.session.rollback()

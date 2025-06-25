@@ -1,9 +1,8 @@
 # backend/app/controllers/chat_controller.py
 """
-ChatController - 채팅 API 컨트롤러
+ChatController - 채팅 API 컨트롤러 (415 에러 수정 버전)
 
-깔끔하게 분리된 채팅 API 엔드포인트들
-BaseController + ChatService를 활용
+GET 요청에서 BaseController 메서드 호출 최소화
 """
 
 from app.controllers.base_controller import BaseController
@@ -21,13 +20,11 @@ class ChatController(BaseController):
     
     def basic_chat(self):
         """
-        POST /api/chat
+        POST /api/
         기본 AI 채팅
         """
-        self.log_request("basic_chat")
-        
         try:
-            # JSON 데이터 검증
+            # JSON 데이터 검증 (POST 요청이므로 안전)
             data, error = self.get_json_data(['message'])
             if error:
                 return error
@@ -54,13 +51,11 @@ class ChatController(BaseController):
     
     def rag_chat(self):
         """
-        POST /api/chat/rag
-        RAG 기반 지능형 채팅 (과제 핵심!)
+        POST /api/rag
+        RAG 기반 지능형 채팅
         """
-        self.log_request("rag_chat")
-        
         try:
-            # JSON 데이터 검증
+            # JSON 데이터 검증 (POST 요청이므로 안전)
             data, error = self.get_json_data(['message'])
             if error:
                 return error
@@ -87,12 +82,11 @@ class ChatController(BaseController):
     
     def get_rag_status(self):
         """
-        GET /api/chat/rag/status
+        GET /api/rag/status
         RAG 시스템 상태 확인
         """
-        self.log_request("get_rag_status")
-        
         try:
+            # GET 요청이므로 log_request() 호출 제거
             status_info = self.service.get_rag_status()
             
             return self.success_response(
@@ -101,6 +95,7 @@ class ChatController(BaseController):
             )
             
         except Exception as e:
+            logger.error(f"RAG 상태 조회 실패: {str(e)}")
             return self.error_response(
                 message="RAG 상태 조회 실패",
                 details=str(e),
@@ -109,12 +104,11 @@ class ChatController(BaseController):
     
     def rebuild_rag_index(self):
         """
-        POST /api/chat/rag/rebuild
+        POST /api/rag/rebuild
         RAG 인덱스 재구축
         """
-        self.log_request("rebuild_rag_index")
-        
         try:
+            # POST 요청이지만 JSON 데이터는 선택적
             result = self.service.rebuild_rag_index()
             
             return self.success_response(
@@ -123,6 +117,7 @@ class ChatController(BaseController):
             )
             
         except Exception as e:
+            logger.error(f"RAG 인덱스 재구축 실패: {str(e)}")
             return self.error_response(
                 message="RAG 인덱스 재구축 실패",
                 details=str(e),
@@ -131,12 +126,11 @@ class ChatController(BaseController):
     
     def test_claude_connection(self):
         """
-        GET /api/chat/test
+        GET /api/test
         Claude API 연결 테스트
         """
-        self.log_request("test_claude_connection")
-        
         try:
+            # GET 요청이므로 log_request() 호출 제거
             test_result = self.service.test_claude_connection()
             
             if test_result["status"] == "success":
@@ -152,6 +146,7 @@ class ChatController(BaseController):
                 )
                 
         except Exception as e:
+            logger.error(f"Claude API 테스트 실패: {str(e)}")
             return self.error_response(
                 message="Claude API 테스트 실패",
                 details=str(e),
@@ -160,12 +155,11 @@ class ChatController(BaseController):
     
     def get_chat_history(self):
         """
-        GET /api/chat/history
+        GET /api/history
         채팅 히스토리 조회
         """
-        self.log_request("get_chat_history")
-        
         try:
+            # GET 요청이므로 log_request() 호출 제거
             from flask import request
             limit = request.args.get('limit', 20, type=int)
             
@@ -181,6 +175,7 @@ class ChatController(BaseController):
             )
             
         except Exception as e:
+            logger.error(f"채팅 히스토리 조회 실패: {str(e)}")
             return self.error_response(
                 message="채팅 히스토리 조회 실패",
                 details=str(e),
@@ -189,13 +184,11 @@ class ChatController(BaseController):
     
     def clear_chat_history(self):
         """
-        DELETE /api/chat/history
+        DELETE /api/history
         채팅 히스토리 삭제
         """
-        self.log_request("clear_chat_history")
-        
         try:
-            # 모든 채팅 히스토리 삭제
+            # DELETE 요청이므로 log_request() 호출 제거
             from models.note import ChatHistory
             from config.database import db
             
@@ -209,6 +202,8 @@ class ChatController(BaseController):
             )
             
         except Exception as e:
+            logger.error(f"채팅 히스토리 삭제 실패: {str(e)}")
+            db.session.rollback()
             return self.error_response(
                 message="채팅 히스토리 삭제 실패",
                 details=str(e),
@@ -217,14 +212,14 @@ class ChatController(BaseController):
     
     def get_chat_stats(self):
         """
-        GET /api/chat/stats
+        GET /api/stats
         채팅 통계 정보
         """
-        self.log_request("get_chat_stats")
-        
         try:
+            # GET 요청이므로 log_request() 호출 제거
             from models.note import ChatHistory
             from datetime import datetime, timedelta
+            from config.database import db
             
             # 기본 통계
             total_chats = ChatHistory.query.count()
@@ -258,6 +253,7 @@ class ChatController(BaseController):
             )
             
         except Exception as e:
+            logger.error(f"채팅 통계 조회 실패: {str(e)}")
             return self.error_response(
                 message="채팅 통계 조회 실패",
                 details=str(e),
