@@ -7,5 +7,6 @@ Controllers 패키지
 
 from .base_controller import BaseController
 from .note_controller import NoteController
+from .chat_controller import ChatController
 
-__all__ = ['BaseController', 'NoteController']
+__all__ = ['BaseController', 'NoteController', 'ChatController']

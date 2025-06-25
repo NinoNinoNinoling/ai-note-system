@@ -6,5 +6,6 @@ Services 패키지
 """
 
 from .note_service import NoteService
+from .chat_service import ChatService
 
-__all__ = ['NoteService']
+__all__ = ['NoteService', 'ChatService']

@@ -18,6 +18,38 @@ class NoteService:
     
     def __init__(self):
         self.repository = NoteRepository()
+        self.rag_available = False
+        self.rag_chain = None
+        
+        # RAG 시스템 초기화
+        self._initialize_rag()
+    
+    def _initialize_rag(self):
+        """RAG 시스템 초기화"""
+        try:
+            from chains.rag_chain import rag_chain, RAG_AVAILABLE
+            
+            if RAG_AVAILABLE and rag_chain and rag_chain.is_available():
+                self.rag_chain = rag_chain
+                self.rag_available = True
+                logger.info("✅ NoteService RAG 시스템 연결 성공")
+            else:
+                logger.warning("⚠️ NoteService RAG 시스템 사용 불가")
+                
+        except ImportError as e:
+            logger.warning(f"⚠️ NoteService RAG 시스템 임포트 실패: {e}")
+    
+    def _update_rag_index(self, note):
+        """RAG 인덱스 업데이트"""
+        if self.rag_available and self.rag_chain:
+            try:
+                success = self.rag_chain.add_note(note.id, note.title, note.content)
+                if success:
+                    logger.info(f"✅ 노트 {note.id} RAG 인덱스 업데이트 완료")
+                else:
+                    logger.warning(f"⚠️ 노트 {note.id} RAG 인덱스 업데이트 실패")
+            except Exception as e:
+                logger.error(f"❌ RAG 인덱스 업데이트 오류: {e}")
     
     def create_note(self, title, content, tags=None):
         """
@@ -53,6 +85,9 @@ class NoteService:
                 content=content,
                 tags=tags
             )
+            
+            # ✨ RAG 인덱스 업데이트
+            self._update_rag_index(note)
             
             logger.info(f"Created note '{title}' with {len(tags)} tags")
             return note
@@ -116,6 +151,10 @@ class NoteService:
             
             # 업데이트 실행
             updated_note = self.repository.update(note, **update_data)
+            
+            # ✨ RAG 인덱스 업데이트 (제목이나 내용이 변경된 경우)
+            if 'title' in update_data or 'content' in update_data:
+                self._update_rag_index(updated_note)
             
             logger.info(f"Updated note {note_id}: {list(update_data.keys())}")
             return updated_note
