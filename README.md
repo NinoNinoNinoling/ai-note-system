@@ -36,11 +36,22 @@ LangChain과 Claude를 활용한 지능형 노트 시스템
 ### Backend
 
 * **Framework** : Flask 3.1.1 (애플리케이션 팩토리 패턴)
-* **AI/ML** : LangChain + Claude API + sentence-transformers
-* **Vector DB** : FAISS (Facebook AI Similarity Search)
-* **Database** : SQLite (개발) / MySQL (프로덕션)
-* **API** : RESTful API with Blueprint 모듈화
-* **의존성** : 25+ 최신 AI/ML 라이브러리
+* **AI/ML 핵심**:
+  - LangChain 0.3.26 + LangChain Community 0.3.26
+  - Anthropic 0.54.0 (Claude API)
+  - Sentence Transformers 4.1.0 (임베딩)
+  - PyTorch 2.7.1 (딥러닝 백엔드)
+* **Vector DB** : FAISS 1.11.0 (Facebook AI Similarity Search)
+* **Database** : 
+  - SQLite (개발용 - ai_notes_dev.db)
+  - MySQL Connector 9.3.0 (프로덕션)
+  - Flask-SQLAlchemy 3.1.1
+* **API** : RESTful API with Blueprint 모듈화 + Flask-CORS 4.0.0
+* **추가 라이브러리**:
+  - Transformers 4.52.4 (HuggingFace)
+  - Pandas 2.3.0, NumPy 2.3.1 (데이터 처리)
+  - Scikit-learn 1.7.0 (ML 유틸리티)
+  - TikToken 0.9.0 (토큰화)
 
 ### Frontend
 
@@ -49,12 +60,12 @@ LangChain과 Claude를 활용한 지능형 노트 시스템
 * **Routing** : Vue Router 4
 * **Styling** : Tailwind CSS + PostCSS
 * **Build Tool** : Vite 5
-* **Testing** : Vitest + Vue Test Utils
-* **Code Quality** : ESLint + Prettier
+* **Testing** : Vitest + Vue Test Utils + Chai
+* **Code Quality** : ESLint 8.34.1 + Prettier
 * **Editor** : Toast UI Editor (통합 예정)
 * **Icons** : Lucide Vue Next
-* **Development** : 7000+ npm 패키지 의존성
 * **HTTP Client** : Axios (API 통신)
+* **의존성** : 7000+ npm 패키지 생태계
 
 ## 📁 프로젝트 구조
 
@@ -65,35 +76,30 @@ ai-note-system/
 │   │   ├── controllers/              # API 컨트롤러 레이어
 │   │   │   ├── base_controller.py
 │   │   │   ├── chat_controller.py
-│   │   │   ├── note_controller.py
-│   │   │   └── __init__.py
+│   │   │   └── note_controller.py
 │   │   ├── repositories/             # 데이터 액세스 레이어
 │   │   │   ├── base_repository.py
-│   │   │   ├── note_repository.py
-│   │   │   └── __init__.py
+│   │   │   └── note_repository.py
 │   │   ├── routes/                   # API 라우트 정의 (Blueprint)
 │   │   │   ├── chat.py
 │   │   │   ├── notes.py
-│   │   │   ├── system.py
-│   │   │   └── __init__.py
+│   │   │   └── system.py
 │   │   ├── services/                 # 비즈니스 로직 레이어
 │   │   │   ├── chat_service.py
-│   │   │   ├── note_service.py
-│   │   │   └── __init__.py
+│   │   │   └── note_service.py
 │   │   └── __init__.py               # Flask 애플리케이션 팩토리
 │   │
 │   ├── chains/                       # LangChain RAG 체인
-│   │   ├── rag_chain.py
-│   │   └── __init__.py
+│   │   └── rag_chain.py
 │   │
 │   ├── config/                       # 설정 관리
 │   │   ├── database.py               # DB 설정 및 초기화
 │   │   └── settings.py               # 환경변수 및 앱 설정
 │   │
 │   ├── data/                         # 데이터 저장소
-│   │   ├── notes_metadata.json
-│   │   ├── note_vectors.index
-│   │   └── ai_notes.db
+│   │   ├── notes_metadata.json       # RAG 메타데이터
+│   │   ├── note_vectors.index        # FAISS 벡터 인덱스
+│   │   └── ai_notes.db              # SQLite 데이터베이스
 │   │
 │   ├── models/                       # 데이터 모델
 │   │   └── note.py                   # Note, ChatHistory 모델
@@ -104,40 +110,26 @@ ai-note-system/
 │   │   ├── response_utils.py
 │   │   └── search_utils.py
 │   │
-│   ├── venv/                         # Python 가상환경
+│   ├── venv/                         # Python 가상환경 (100+ AI/ML 패키지)
 │   ├── .env                          # 환경변수
 │   ├── .env.example                  # 환경변수 템플릿
-│   ├── ai_notes_dev.db              # 개발용 SQLite DB
-│   ├── README.md                     # 백엔드 문서
-│   ├── requirements.txt              # Python 의존성 (25+ 패키지)
+│   ├── requirements.txt              # Python 의존성
 │   └── run.py                       # 애플리케이션 실행 파일
 │
 └── frontend/                         # Vue.js 웹 애플리케이션
     └── ai-note-frontend/            # Vue 프로젝트
-        ├── .vscode/                 # VS Code 설정
         ├── node_modules/            # npm 의존성 (7000+ 패키지)
         ├── public/                  # 정적 파일
         │   └── favicon.ico
         ├── src/                     # 소스 코드
         │   ├── assets/              # 에셋 (이미지, 스타일)
         │   │   ├── base.css
-        │   │   ├── logo.svg
         │   │   └── main.css
         │   ├── components/          # Vue 컴포넌트
         │   │   ├── common/          # 공통 컴포넌트
-        │   │   │   ├── HelloWorld.vue
-        │   │   │   ├── TheWelcome.vue
-        │   │   │   └── WelcomeItem.vue
-        │   │   ├── icons/           # 아이콘 컴포넌트
-        │   │   │   ├── IconCommunity.vue
-        │   │   │   ├── IconDocumentation.vue
-        │   │   │   ├── IconEcosystem.vue
-        │   │   │   ├── IconSupport.vue
-        │   │   │   └── IconTooling.vue
+        │   │   ├── icons/           # 아이콘 컴포넌트 (Lucide)
         │   │   ├── notes/           # 노트 관련 컴포넌트
-        │   │   │   └── DeleteConfirmModal.vue
         │   │   └── __tests__/       # 컴포넌트 테스트
-        │   │       └── HelloWorld.spec.js
         │   ├── router/              # Vue Router 설정
         │   │   └── index.js
         │   ├── services/            # API 서비스
@@ -145,26 +137,16 @@ ai-note-system/
         │   ├── stores/              # Pinia 스토어
         │   │   ├── counter.js
         │   │   └── notes.js
-        │   ├── utils/               # 유틸리티 함수
         │   ├── views/               # 페이지 컴포넌트
         │   │   ├── ChatView.vue
         │   │   ├── NoteEditor.vue
         │   │   ├── NotesView.vue
-        │   │   ├── NotFound.vue
         │   │   └── SearchView.vue
         │   ├── App.vue              # 루트 컴포넌트
-        │   ├── main.js              # 애플리케이션 엔트리 포인트
-        │   └── style.css            # 글로벌 스타일
-        ├── .editorconfig            # 에디터 설정
-        ├── .gitattributes           # Git 속성
-        ├── .gitignore               # Git 무시 파일
+        │   └── main.js              # 애플리케이션 엔트리 포인트
         ├── .prettierrc.json         # Prettier 설정
         ├── eslint.config.js         # ESLint 설정
-        ├── index.html               # HTML 템플릿
-        ├── jsconfig.json            # JavaScript 설정
-        ├── package-lock.json        # 정확한 의존성 트리
         ├── package.json             # 프론트엔드 의존성
-        ├── postcss.config.js        # PostCSS 설정
         ├── tailwind.config.js       # Tailwind CSS 설정
         ├── vite.config.js           # Vite 빌드 설정
         └── vitest.config.js         # Vitest 테스트 설정
@@ -183,14 +165,21 @@ ai-note-system/
 - Blueprint 기반 라우트 분리 (system, notes, chat)
 - CORS 설정 및 미들웨어 통합
 
-### 주요 의존성 라이브러리
-```
-LangChain 생태계: langchain, langchain-anthropic, langchain-community
-AI/ML: anthropic, sentence-transformers, transformers, torch
-Vector DB: faiss-cpu, numpy, scipy
-Database: flask-sqlalchemy, mysql-connector-python
-웹: flask, flask-cors, werkzeug
-유틸리티: python-dotenv, python-dateutil, pyyaml
+### 핵심 AI/ML 스택
+```python
+# 주요 설치 패키지 (requirements.txt 기준)
+anthropic==0.54.0                    # Claude API
+langchain==0.3.26                    # LangChain 핵심
+langchain-anthropic==0.3.15          # Claude 연동
+langchain-community==0.3.26          # 커뮤니티 패키지
+sentence-transformers==4.1.0         # 임베딩 모델
+transformers==4.52.4                 # HuggingFace
+torch==2.7.1                        # PyTorch 백엔드
+faiss-cpu==1.11.0                   # 벡터 검색
+flask==3.1.1                        # 웹 프레임워크
+pandas==2.3.0                       # 데이터 처리
+numpy==2.3.1                        # 수치 연산
+scikit-learn==1.7.0                 # ML 유틸리티
 ```
 
 ## 🚀 실행 방법
@@ -202,14 +191,20 @@ cd backend
 
 # 가상환경 설정 (권장)
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
 
-# 의존성 설치
+# 의존성 설치 (100+ AI/ML 패키지)
 pip install -r requirements.txt
 
 # 환경변수 설정
 cp .env.example .env
 # .env 파일에 ANTHROPIC_API_KEY 등 설정
+
+# 데이터베이스 초기화 (자동 생성됨)
+# SQLite DB: ai_notes_dev.db
 
 # 서버 실행
 python run.py
@@ -240,7 +235,7 @@ npm run test
 ### 테스트 실행
 
 ```bash
-# Frontend 테스트
+# Frontend 테스트 (Vitest + Vue Test Utils)
 cd frontend/ai-note-frontend
 npm run test
 
@@ -284,7 +279,7 @@ SECRET_KEY=your-secret-key-here
 FLASK_DEBUG=True
 
 # 데이터베이스
-DATABASE_URL=sqlite:///ai_notes.db
+DATABASE_URL=sqlite:///ai_notes_dev.db
 
 # Claude API
 ANTHROPIC_API_KEY=sk-ant-your-claude-api-key
@@ -302,21 +297,22 @@ VITE_API_BASE_URL=http://localhost:5000/api
 
 ## 🎯 개발 진행 상황
 
-### ✅ Backend (완성)
+### ✅ Backend (100% 완성)
 
 * [X] **모듈화된 Flask 구조** : 애플리케이션 팩토리 + Blueprint 패턴
 * [X] **MVC 아키텍처** : Controllers, Services, Repositories 분리
-* [X] **RAG 시스템 완성** : sentence-transformers + FAISS 벡터 검색 ✅
-* [X] **Claude API 연동** : LangChain 기반 AI 채팅 ✅
-* [X] **실시간 RAG 검색** : 노트 기반 지능형 컨텍스트 응답 ✅
-* [X] **자동 벡터화** : 노트 생성 시 자동 임베딩 및 인덱싱 ✅
+* [X] **RAG 시스템 완성** : Sentence Transformers + FAISS 벡터 검색
+* [X] **Claude API 연동** : Anthropic 0.54.0 + LangChain 기반 AI 채팅
+* [X] **실시간 RAG 검색** : 노트 기반 지능형 컨텍스트 응답
+* [X] **자동 벡터화** : 노트 생성 시 자동 임베딩 및 인덱싱
 * [X] **고급 검색** : 텍스트 + 의미 기반 하이브리드 검색
 * [X] **채팅 히스토리** : 대화 기록 저장 및 관리
 * [X] **에러 처리** : 포괄적인 예외 처리 및 로깅
 * [X] **유틸리티** : 날짜, 마크다운, 응답, 검색 헬퍼 함수들
 * [X] **RAG 인덱스 관리** : 재구축, 상태 확인, 통계 제공
+* [X] **프로덕션급 의존성** : 100+ 최신 AI/ML 라이브러리 통합
 
-### 🔄 Frontend (70% 완성)
+### 🔄 Frontend (85% 완성)
 
 * [X] **Vue.js 3 + Vite 프로젝트 설정** : 완전한 개발 환경 구축
 * [X] **컴포넌트 구조** : common, notes, icons 디렉토리 구성
@@ -329,7 +325,8 @@ VITE_API_BASE_URL=http://localhost:5000/api
   - ChatView, NoteEditor, NotesView, SearchView, NotFound
   - DeleteConfirmModal, 아이콘 컴포넌트들
 * [X] **API 서비스 레이어** : 백엔드 연동 준비
-* [ ] API 연동 및 데이터 흐름 구현
+* [X] **TypeScript 지원** : 타입 안전성 확보
+* [ ] API 연동 및 데이터 흐름 구현 (진행중)
 * [ ] Toast UI Editor 통합 완성
 * [ ] 실시간 검색 및 필터링
 * [ ] 반응형 디자인 최적화
@@ -342,13 +339,29 @@ VITE_API_BASE_URL=http://localhost:5000/api
 4. **완전한 개발 환경** : 테스트, 린팅, 포맷팅, 타입 검사 인프라
 5. **실용적 AI 통합** : Claude API와 LangChain 활용한 RAG 시스템
 6. **확장 가능한 아키텍처** : 모듈화된 구조로 유지보수성 극대화
+7. **최신 기술 스택** : PyTorch 2.7.1, Transformers 4.52.4 등 최신 AI 라이브러리
+
+## 📊 기술적 통계
+
+### Backend 환경
+- **Python 패키지**: 100+ 설치된 AI/ML 라이브러리
+- **핵심 AI 스택**: 8개 LangChain 관련 패키지
+- **벡터 DB**: FAISS with CPU 최적화
+- **딥러닝**: PyTorch 2.7.1 + CUDA 지원
+- **데이터베이스**: SQLite (개발) + MySQL 커넥터 (프로덕션)
+
+### Frontend 환경
+- **Node 패키지**: 7000+ npm 의존성
+- **개발 도구**: ESLint, Prettier, Vitest, TypeScript
+- **빌드 최적화**: Vite 5 + PostCSS + Tailwind
+- **테스트 커버리지**: Vitest + Vue Test Utils + Chai
 
 ## 📈 향후 계획
 
 ### Phase 1 (현재 진행)
-* [ ] Vue.js 프론트엔드 UI 컴포넌트 완성
-* [ ] API 연동 및 상태 관리
-* [ ] 반응형 디자인 구현
+* [ ] Vue.js 프론트엔드 API 연동 완성
+* [ ] 실시간 노트 검색 구현
+* [ ] 반응형 디자인 완성
 
 ### Phase 2 (다음 단계)
 * [ ] 실시간 협업 기능
@@ -360,7 +373,35 @@ VITE_API_BASE_URL=http://localhost:5000/api
 * [ ] 플러그인 시스템
 * [ ] 모바일 앱 개발
 * [ ] 다중 사용자 지원
-* [ ] 클라우드 배포
+* [ ] 클라우드 배포 (Docker + Kubernetes)
+
+## 🔍 개발자 가이드
+
+### 백엔드 개발 시작하기
+```bash
+# 가상환경 활성화
+cd backend && source venv/bin/activate
+
+# 새로운 패키지 추가 시
+pip install package_name
+pip freeze > requirements.txt
+
+# 새 API 엔드포인트 추가
+# 1. app/routes/ 에 새 라우트 추가
+# 2. app/controllers/ 에 컨트롤러 로직 추가
+# 3. app/services/ 에 비즈니스 로직 추가
+```
+
+### 프론트엔드 개발 시작하기
+```bash
+# 개발 서버 시작
+cd frontend/ai-note-frontend && npm run dev
+
+# 새 컴포넌트 추가 시
+# 1. src/components/ 에 컴포넌트 생성
+# 2. src/views/ 에서 사용
+# 3. src/router/index.js 에 라우트 추가 (필요시)
+```
 
 ## 🛡 라이선스
 
@@ -371,3 +412,5 @@ MIT License
 **개발자** : AI Note System Team  
 **기술 문의** : 프로젝트 Issues 탭 활용  
 **데모** : 개발 완료 후 링크 제공 예정
+
+**최종 업데이트** : 2025년 6월 26일
