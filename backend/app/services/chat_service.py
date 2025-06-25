@@ -1,15 +1,16 @@
 # backend/app/services/chat_service.py
 """
-ChatService - 채팅 관련 비즈니스 로직 (프로덕션 버전)
+ChatService - 채팅 관련 비즈니스 로직 (RAG 연결 완료)
 
-깔끔하게 정리된 ChatController 호환 메서드들
+RAG 시스템과 완전히 연결된 ChatController 호환 메서드들
 """
 
 import logging
 from datetime import datetime
 from config.settings import Config
-from models.note import ChatHistory
+from models.note import ChatHistory, Note
 from config.database import db
+from chains.rag_chain import rag_chain
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ class ChatService:
     
     def rag_chat(self, message: str, save_history: bool = True) -> dict:
         """
-        RAG 기반 지능형 채팅
+        RAG 기반 지능형 채팅 (실제 RAG 시스템 연결)
         
         Args:
             message: 사용자 메시지
@@ -81,26 +82,70 @@ class ChatService:
         
         message = message.strip()
         
-        # 현재는 기본 채팅과 동일 (향후 실제 RAG 구현 예정)
-        rag_message = f"[RAG 모드] {message}"
+        # RAG 컨텍스트 검색
+        context = ""
+        relevant_notes = []
+        rag_enabled = rag_chain.is_available()
         
+        if rag_enabled:
+            try:
+                context = rag_chain.get_context_for_query(message, k=3)
+                relevant_notes = rag_chain.search_similar_notes(message, k=3)
+                
+                # Claude에게 컨텍스트와 함께 질문
+                rag_prompt = f"""다음은 사용자의 노트들에서 검색된 관련 정보입니다:
+
+{context}
+
+위 정보를 참고해서 다음 질문에 답변해주세요:
+질문: {message}
+
+답변 시 다음 사항을 지켜주세요:
+1. 검색된 노트 내용을 활용해 구체적으로 답변
+2. 노트에 없는 내용은 일반적인 지식으로 보완
+3. 한국어로 친근하게 답변
+4. 관련 노트가 없다면 일반적인 답변 제공
+
+답변:"""
+                
+                logger.info(f"RAG 검색 완료: {len(relevant_notes)}개 관련 노트 발견")
+                
+            except Exception as rag_error:
+                logger.error(f"RAG 검색 오류: {rag_error}")
+                rag_prompt = f"[RAG 검색 실패] {message}"
+                context = "RAG 검색 중 오류가 발생했습니다."
+                
+        else:
+            rag_prompt = f"[RAG 시스템 사용 불가] {message}"
+            context = "RAG 시스템이 현재 사용할 수 없습니다."
+        
+        # AI 응답 생성
         if not self.api_key:
-            ai_result = self._get_mock_response(rag_message)
+            ai_result = self._get_mock_rag_response(message, relevant_notes)
         else:
             try:
-                ai_result = self._get_claude_response(rag_message)
+                ai_result = self._get_claude_response(rag_prompt)
             except Exception as claude_error:
                 logger.warning(f"Claude API 실패, Mock으로 폴백: {claude_error}")
-                ai_result = self._get_mock_response(rag_message)
+                ai_result = self._get_mock_rag_response(message, relevant_notes)
         
-        # RAG 메타데이터 추가
+        # 결과 구성
         result = {
             "user_message": message,
-            "ai_response": ai_result["response"] + "\n\n*RAG 기능은 현재 개발 중입니다.",
+            "ai_response": ai_result["response"],
             "model": "RAG + " + ai_result["model"],
             "success": ai_result["success"],
-            "rag_enabled": False,  # 현재는 비활성화
-            "relevant_notes": [],  # 향후 구현
+            "rag_enabled": rag_enabled,
+            "relevant_notes": [
+                {
+                    "note_id": note["note_id"],
+                    "title": note["title"],
+                    "content_preview": note["content_preview"],
+                    "similarity_score": round(note["similarity_score"], 3)
+                } for note in relevant_notes
+            ],
+            "context_length": len(context),
+            "search_query": message,
             "timestamp": datetime.now().isoformat()
         }
         
@@ -115,29 +160,91 @@ class ChatService:
         return result
     
     def get_rag_status(self) -> dict:
-        """RAG 시스템 상태 확인"""
-        return {
-            "rag_status": {
-                "available": False,
-                "reason": "RAG 시스템 구현 예정"
-            },
-            "vector_store": {
-                "indexed_notes": 0,
-                "last_updated": None
-            },
-            "embeddings_model": None,
-            "timestamp": datetime.now().isoformat()
-        }
+        """RAG 시스템 상태 확인 (실제 상태 반환)"""
+        try:
+            rag_stats = rag_chain.get_stats()
+            
+            return {
+                "rag_status": {
+                    "available": rag_stats["available"],
+                    "reason": "정상 동작" if rag_stats["available"] else "패키지 미설치 또는 초기화 실패"
+                },
+                "vector_store": {
+                    "indexed_notes": rag_stats["indexed_notes"],
+                    "vector_count": rag_stats["vector_count"],
+                    "last_updated": datetime.now().isoformat() if rag_stats["indexed_notes"] > 0 else None
+                },
+                "embeddings_model": rag_stats["model_name"],
+                "model_dimension": rag_stats["dimension"],
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"RAG 상태 확인 오류: {e}")
+            return {
+                "rag_status": {
+                    "available": False,
+                    "reason": f"상태 확인 실패: {str(e)}"
+                },
+                "vector_store": {
+                    "indexed_notes": 0,
+                    "last_updated": None
+                },
+                "embeddings_model": None,
+                "timestamp": datetime.now().isoformat()
+            }
     
     def rebuild_rag_index(self) -> dict:
-        """RAG 인덱스 재구축"""
-        return {
-            "status": "pending",
-            "message": "RAG 인덱스 재구축 기능은 구현 예정입니다",
-            "progress": 0,
-            "estimated_time": None,
-            "timestamp": datetime.now().isoformat()
-        }
+        """RAG 인덱스 재구축 (실제 구현)"""
+        try:
+            if not rag_chain.is_available():
+                return {
+                    "status": "error",
+                    "message": "RAG 시스템이 사용 불가능합니다",
+                    "progress": 0,
+                    "timestamp": datetime.now().isoformat()
+                }
+            
+            # 모든 노트 조회
+            notes = Note.query.all()
+            note_data = [
+                {
+                    "id": note.id,
+                    "title": note.title,
+                    "content": note.content
+                }
+                for note in notes
+            ]
+            
+            logger.info(f"RAG 인덱스 재구축 시작: {len(note_data)}개 노트")
+            
+            # 인덱스 재구축
+            success = rag_chain.rebuild_index(note_data)
+            
+            if success:
+                return {
+                    "status": "success",
+                    "message": f"RAG 인덱스 재구축 완료: {len(note_data)}개 노트 처리",
+                    "progress": 100,
+                    "indexed_notes": len(note_data),
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "RAG 인덱스 재구축 실패",
+                    "progress": 0,
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+        except Exception as e:
+            logger.error(f"RAG 인덱스 재구축 오류: {e}")
+            return {
+                "status": "error",
+                "message": f"인덱스 재구축 중 오류: {str(e)}",
+                "progress": 0,
+                "timestamp": datetime.now().isoformat()
+            }
     
     def test_claude_connection(self) -> dict:
         """Claude API 연결 테스트"""
@@ -252,7 +359,7 @@ Composition API를 사용하면 더 깔끔한 코드를 작성할 수 있어요!
 **API 엔드포인트:**
 - `GET /api/notes` - 노트 목록
 - `POST /api/notes` - 새 노트 생성
-- `POST /api/` - AI와 대화
+- `POST /api/chat` - AI와 대화
 
 더 궁금한 게 있으면 언제든 물어보세요! 😊"""
 
@@ -270,6 +377,41 @@ AI Note System에서는 다양한 질문에 답변해드릴 수 있습니다:
         return {
             "response": response,
             "model": "Mock AI (개발용)",
+            "success": True
+        }
+    
+    def _get_mock_rag_response(self, message: str, relevant_notes: list) -> dict:
+        """RAG용 Mock 응답 생성"""
+        if relevant_notes:
+            notes_summary = ", ".join([note["title"] for note in relevant_notes[:3]])
+            response = f"""[RAG 모드 - Mock] "{message}"에 대해 검색된 관련 노트들을 참고해서 답변드립니다.
+
+🔍 **검색된 관련 노트:** {notes_summary}
+
+검색된 노트들의 내용을 종합하면, 당신의 질문과 관련된 유용한 정보들이 있습니다. 실제 Claude API가 연결되면 이 노트들의 내용을 바탕으로 더 정확하고 구체적인 답변을 제공할 수 있습니다.
+
+💡 **RAG 시스템 동작 확인:**
+- 벡터 검색: ✅ 완료 ({len(relevant_notes)}개 노트 발견)
+- 컨텍스트 생성: ✅ 완료
+- AI 응답 생성: 🔄 Mock 모드
+
+Claude API 키를 설정하시면 실제 AI 기반 응답을 받으실 수 있습니다! 🤖"""
+        else:
+            response = f"""[RAG 모드 - Mock] "{message}"에 대해 검색했지만 관련된 노트를 찾을 수 없습니다.
+
+🔍 **검색 결과:** 관련 노트 없음
+
+새로운 노트를 작성하신 후 다시 질문해보시거나, 다른 키워드로 질문해보세요.
+
+💡 **RAG 시스템 동작 확인:**
+- 벡터 검색: ✅ 완료 (관련 노트 없음)
+- 일반 AI 응답: 🔄 Mock 모드
+
+노트를 더 많이 작성하시면 더 정확한 RAG 검색이 가능합니다! 📝"""
+        
+        return {
+            "response": response,
+            "model": "Mock RAG AI (개발용)",
             "success": True
         }
     

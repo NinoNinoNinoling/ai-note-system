@@ -1,66 +1,10 @@
 [
   {
-    "note_id": 1,
-    "title": "LangChain 체인 개념",
-    "content_preview": "# LangChain 체인\n\nLangChain의 체인은 여러 AI 작업을 순서대로 연결하는 핵심 개념입니다.\n\n## 주요 체인 유형\n- LLMChain: 기본 LLM 호출\n- ConversationalRetrievalChain: 대화형 검색\n\n#LangChain #체인 #AI",
-    "full_content": "# LangChain 체인\n\nLangChain의 체인은 여러 AI 작업을 순서대로 연결하는 핵심 개념입니다.\n\n## 주요 체인 유형\n- LLMChain: 기본 LLM 호출\n- ConversationalRetrievalChain: 대화형 검색\n\n#LangChain #체인 #AI",
-    "content_length": 154
-  },
-  {
-    "note_id": 2,
-    "title": "RAG 시스템 구현",
-    "content_preview": "# RAG (Retrieval-Augmented Generation)\n\nRAG는 검색과 생성을 결합한 AI 기술입니다.\n\n## 핵심 구성요소\n1. 문서 임베딩\n2. 벡터 검색 (FAISS)\n3. 컨텍스트 생성\n4. AI 답변 생성\n\n#RAG #검색 #벡터",
-    "full_content": "# RAG (Retrieval-Augmented Generation)\n\nRAG는 검색과 생성을 결합한 AI 기술입니다.\n\n## 핵심 구성요소\n1. 문서 임베딩\n2. 벡터 검색 (FAISS)\n3. 컨텍스트 생성\n4. AI 답변 생성\n\n#RAG #검색 #벡터",
-    "content_length": 142
-  },
-  {
-    "note_id": 3,
-    "title": "Flask API 개발",
-    "content_preview": "# Flask REST API 개발\n\n## Blueprint 사용법\n```python\nfrom flask import Blueprint\napi_bp = Blueprint('api', __name__)\n```\n\n## 에러 핸들링\n```python\n@app.errorhandler(404)\ndef not_found(error):\n    return jsonify...",
-    "full_content": "# Flask REST API 개발\n\n## Blueprint 사용법\n```python\nfrom flask import Blueprint\napi_bp = Blueprint('api', __name__)\n```\n\n## 에러 핸들링\n```python\n@app.errorhandler(404)\ndef not_found(error):\n    return jsonify({'error': 'Not found'}), 404\n```\n\n#Flask #API #Python",
-    "content_length": 254
-  },
-  {
-    "note_id": 1,
-    "title": "test",
-    "content_preview": "",
-    "full_content": "",
-    "content_length": 0
-  },
-  {
     "note_id": 2,
     "title": "test",
-    "content_preview": "",
-    "full_content": "",
-    "content_length": 0
-  },
-  {
-    "note_id": 2,
-    "title": "test",
-    "content_preview": "",
-    "full_content": "",
-    "content_length": 0
-  },
-  {
-    "note_id": 2,
-    "title": "test",
-    "content_preview": "umm...",
-    "full_content": "umm...",
-    "content_length": 6
-  },
-  {
-    "note_id": 2,
-    "title": "test",
-    "content_preview": "umm...\n2",
-    "full_content": "umm...\n2",
-    "content_length": 8
-  },
-  {
-    "note_id": 3,
-    "title": "테테테스트",
-    "content_preview": "",
-    "full_content": "",
-    "content_length": 0
+    "content_preview": "Flask REST API 개발 가이드\n\n- Blueprint로 모듈화\n- 에러 처리 표준화\n- 로깅 시스템",
+    "full_content": "Flask REST API 개발 가이드\n\n- Blueprint로 모듈화\n- 에러 처리 표준화\n- 로깅 시스템",
+    "content_length": 60
   },
   {
     "note_id": 4,
@@ -70,13 +14,6 @@
     "content_length": 2
   },
   {
-    "note_id": 5,
-    "title": "ㅇㅇ",
-    "content_preview": "",
-    "full_content": "",
-    "content_length": 0
-  },
-  {
     "note_id": 6,
     "title": "ㅇㅇ",
     "content_preview": "ㅇㅇㅇㅇㅇ",
@@ -84,25 +21,11 @@
     "content_length": 5
   },
   {
-    "note_id": 7,
-    "title": "ㅇㅇㅇㅇ",
-    "content_preview": "",
-    "full_content": "",
-    "content_length": 0
-  },
-  {
     "note_id": 8,
     "title": "ㅇㅇㅇㅇ",
     "content_preview": "ㅇㅇ",
     "full_content": "ㅇㅇ",
     "content_length": 2
-  },
-  {
-    "note_id": 9,
-    "title": "ㅇ",
-    "content_preview": "",
-    "full_content": "",
-    "content_length": 0
   },
   {
     "note_id": 10,
@@ -121,13 +44,6 @@
   {
     "note_id": 12,
     "title": "22",
-    "content_preview": "222222",
-    "full_content": "222222",
-    "content_length": 6
-  },
-  {
-    "note_id": 12,
-    "title": "22",
     "content_preview": "222222.",
     "full_content": "222222.",
     "content_length": 7
@@ -138,5 +54,47 @@
     "content_preview": "## 아",
     "full_content": "## 아",
     "content_length": 4
+  },
+  {
+    "note_id": 14,
+    "title": "Vue.js 학습 노트",
+    "content_preview": "# Vue.js 기초\n\n## Composition API\n- ref(), reactive()\n- computed, watch\n\n#vue #frontend #javascript",
+    "full_content": "# Vue.js 기초\n\n## Composition API\n- ref(), reactive()\n- computed, watch\n\n#vue #frontend #javascript",
+    "content_length": 97
+  },
+  {
+    "note_id": 15,
+    "title": "Python Flask API",
+    "content_preview": "Flask로 REST API 만들기\n\n- Blueprint 사용\n- 에러 처리",
+    "full_content": "Flask로 REST API 만들기\n\n- Blueprint 사용\n- 에러 처리",
+    "content_length": 43
+  },
+  {
+    "note_id": 16,
+    "title": "데이터베이스 설계",
+    "content_preview": "# 데이터베이스 설계 원칙\n\n## 정규화\n1. 1NF - 원자값\n2. 2NF - 완전 함수 종속\n3. 3NF - 이행적 종속 제거\n\n## 인덱스\n- 성능 향상\n- 메모리 사용량 증가\n\n#database #design #sql",
+    "full_content": "# 데이터베이스 설계 원칙\n\n## 정규화\n1. 1NF - 원자값\n2. 2NF - 완전 함수 종속\n3. 3NF - 이행적 종속 제거\n\n## 인덱스\n- 성능 향상\n- 메모리 사용량 증가\n\n#database #design #sql",
+    "content_length": 125
+  },
+  {
+    "note_id": 17,
+    "title": "Vue.js 학습 노트",
+    "content_preview": "# Vue.js 기초\n\n## Composition API\n- ref(), reactive()\n- computed, watch\n\n#vue #frontend #javascript",
+    "full_content": "# Vue.js 기초\n\n## Composition API\n- ref(), reactive()\n- computed, watch\n\n#vue #frontend #javascript",
+    "content_length": 97
+  },
+  {
+    "note_id": 18,
+    "title": "Python Flask API",
+    "content_preview": "Flask로 REST API 만들기\n\n- Blueprint 사용\n- 에러 처리",
+    "full_content": "Flask로 REST API 만들기\n\n- Blueprint 사용\n- 에러 처리",
+    "content_length": 43
+  },
+  {
+    "note_id": 19,
+    "title": "데이터베이스 설계",
+    "content_preview": "# 데이터베이스 설계 원칙\n\n## 정규화\n1. 1NF - 원자값\n2. 2NF - 완전 함수 종속\n3. 3NF - 이행적 종속 제거\n\n## 인덱스\n- 성능 향상\n- 메모리 사용량 증가\n\n#database #design #sql",
+    "full_content": "# 데이터베이스 설계 원칙\n\n## 정규화\n1. 1NF - 원자값\n2. 2NF - 완전 함수 종속\n3. 3NF - 이행적 종속 제거\n\n## 인덱스\n- 성능 향상\n- 메모리 사용량 증가\n\n#database #design #sql",
+    "content_length": 125
   }
 ]
