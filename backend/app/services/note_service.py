@@ -244,3 +244,33 @@ class NoteService:
         except Exception as e:
             logger.error(f"Error searching notes: {e}")
             raise Exception(f"노트 검색 중 오류가 발생했습니다: {str(e)}")
+        
+    def delete_note(self, note_id):
+        """노트 삭제"""
+        print(f"\n🗑️ NoteService.delete_note({note_id}) 실행")
+
+        try:
+            if not note_id or note_id <= 0:
+                raise ValueError("유효하지 않은 노트 ID입니다")
+            
+            note = self.repository.find_by_id(note_id)
+            if not note:
+                print(f"❌ 노트 ID {note_id} 찾을 수 없음")
+                raise ValueError(f"노트 ID {note_id}를 찾을 수 없습니다")
+            
+            print(f"🔍 삭제할 노트: ID={note.id}, Title='{note.title}'")
+            
+            success = self.repository.delete(note_id)
+            if success:
+                print(f"✅ 노트 ID {note_id} 삭제 성공")
+                logger.info(f"Deleted note ID: {note_id}")
+                return True
+            else:
+                print(f"❌ 노트 ID {note_id} 삭제 실패")
+                return False
+
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting note {note_id}: {e}")
+            raise Exception(f"노트 삭제 중 오류가 발생했습니다: {str(e)}")

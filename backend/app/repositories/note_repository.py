@@ -428,3 +428,28 @@ class NoteRepository(BaseRepository):
             print(f"❌ 개수 조회 에러: {e}")
             logger.error(f"Error counting notes: {e}")
             raise
+        
+    def delete(self, note_id):
+        """노트 삭제 - 디버깅 포함"""
+        print(f"\n🗑️ NoteRepository.delete({note_id}) 실행")
+
+        try:
+            note = self.model.query.get(note_id)
+            if not note:
+                print(f"❌ 노트 ID {note_id}를 찾을 수 없음")
+                return False
+            
+            print(f"🔍 삭제할 노트: ID={note.id}, Title='{note.title}'")
+
+            self.session.delete(note)
+            self.session.commit()
+
+            print(f"✅ 노트 ID {note_id} 삭제 완료")
+            logger.info(f"Deleted note: ID={note_id}")
+            return True
+
+        except Exception as e:
+            print(f"❌ 노트 삭제 에러: {e}")
+            logger.error(f"Error deleting note ID {note_id}: {e}")
+            self.session.rollback()
+            raise
