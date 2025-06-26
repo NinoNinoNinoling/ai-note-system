@@ -1,5 +1,5 @@
 // frontend/ai-note-frontend/src/services/api.js
-// 실제 백엔드 엔드포인트에 맞게 수정된 버전
+// 버그 수정 완료 버전
 
 import axios from 'axios'
 
@@ -47,7 +47,7 @@ api.interceptors.response.use(
   }
 )
 
-// ✅ 노트 관련 API - 실제 백엔드 엔드포인트에 맞게 수정
+// ✅ 노트 관련 API - 버그 수정 완료
 const notesAPI = {
   // 노트 목록 조회
   getAll: (params = {}) => api.get('/api/notes', { params }),
@@ -55,16 +55,27 @@ const notesAPI = {
   // 특정 노트 조회
   getById: (id) => api.get(`/api/notes/${id}`),
 
-  // 노트 생성
+  // getOne 별칭 (호환성)
+  getOne: (id) => api.get(`/api/notes/${id}`),
+
+  // 노트 생성 - ✅ 명시적 헤더 추가
   create: (noteData) => {
     console.log('📝 새 노트 생성 시작:', noteData.title)
-    return api.post('/api/notes', noteData)
+    return api.post('/api/notes', noteData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
   },
 
-  // 노트 수정
+  // 노트 수정 - ✅ 명시적 헤더 추가
   update: (id, noteData) => {
     console.log(`✏️ 노트 ${id} 수정 시작:`, noteData.title)
-    return api.put(`/api/notes/${id}`, noteData)
+    return api.put(`/api/notes/${id}`, noteData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
   },
 
   // 노트 삭제
@@ -236,7 +247,7 @@ const systemAPI = {
   markdownPreview: (content) => api.post('/utils/markdown', { content })
 }
 
-// ✅ 유틸리티 함수들
+// ✅ 유틸리티 함수들 - 버그 수정 완료
 const apiUtils = {
   // 에러 메시지 추출
   getErrorMessage: (errorObj) => {
@@ -283,18 +294,32 @@ const apiUtils = {
     }
   },
 
-  // 노트 생성 + RAG 인덱싱 (통합 함수)
+  // ✅ 노트 생성 + RAG 인덱싱 - 올바른 응답 파싱
   async createAndIndexNote(noteData) {
     try {
       console.log('📝 노트 생성 + RAG 인덱싱 시작')
 
+      // ✅ 필수 필드 기본값 보장
+      const noteToCreate = {
+        title: noteData?.title?.trim() || 'Untitled',
+        content: noteData?.content?.trim() || '',
+        tags: Array.isArray(noteData?.tags) ? noteData.tags : []
+      }
+
       // 1. 노트 생성
-      const createResponse = await notesAPI.create(noteData)
-      const newNote = createResponse.data.note || createResponse.data
+      const createResponse = await notesAPI.create(noteToCreate)
 
-      console.log('✅ 노트 생성됨:', newNote.title)
+      // 2. ✅ 올바른 응답 구조 파싱: response.data.data.note
+      const newNote = createResponse.data?.data?.note
 
-      // 2. RAG 인덱스 자동 재구축 (백엔드에서 자동으로 하지만 확실히 하기 위해)
+      if (!newNote || !newNote.id) {
+        console.error('❌ 응답 구조:', createResponse.data)
+        throw new Error('노트 생성 응답에서 ID를 찾을 수 없습니다')
+      }
+
+      console.log('✅ 노트 생성됨:', newNote.title, 'ID:', newNote.id)
+
+      // 3. RAG 인덱스 자동 재구축 (백엔드에서 자동으로 하지만 확실히 하기 위해)
       try {
         await chatAPI.ragRebuild()
         console.log('✅ RAG 인덱스 업데이트 완료')
@@ -331,114 +356,90 @@ const apiUtils = {
         console.log('❌ 백엔드: 연결 실패')
       }
 
-      // 2. Claude API 확인
+      // 2. 데이터베이스 확인
       try {
-        const claudeResponse = await chatAPI.testClaude()
-        results.claude = claudeResponse.data?.status === 'success'
-        console.log(`${results.claude ? '✅' : '⚠️'} Claude API: ${results.claude ? '연결됨' : '연결 실패'}`)
+        await notesAPI.getAll({ limit: 1 })
+        results.database = true
+        console.log('✅ 데이터베이스: 정상')
       } catch {
-        console.log('❌ Claude API: 테스트 실패')
+        console.log('❌ 데이터베이스: 연결 실패')
       }
 
-      // 3. RAG 시스템 확인
+      // 3. Claude API 확인
       try {
-        const ragResponse = await chatAPI.ragStatus()
-        results.rag = ragResponse.data?.rag_status?.available || false
-        console.log(`${results.rag ? '✅' : '⚠️'} RAG: ${results.rag ? '활성화' : '비활성화'}`)
+        await chatAPI.testClaude()
+        results.claude = true
+        console.log('✅ Claude API: 정상')
       } catch {
-        console.log('❌ RAG: 상태 확인 실패')
+        console.log('❌ Claude API: 연결 실패')
       }
 
-      // 4. 엔드포인트 목록 확인
+      // 4. RAG 시스템 확인
+      try {
+        await chatAPI.ragStatus()
+        results.rag = true
+        console.log('✅ RAG 시스템: 정상')
+      } catch {
+        console.log('❌ RAG 시스템: 연결 실패')
+      }
+
+      // 5. 엔드포인트 목록 확인
       try {
         const endpointsResponse = await chatAPI.getEndpoints()
         results.endpoints = endpointsResponse.data
-        console.log('✅ 엔드포인트: 정상')
+        console.log('✅ API 엔드포인트: 정상')
       } catch {
-        console.log('❌ 엔드포인트: 조회 실패')
+        console.log('❌ API 엔드포인트: 조회 실패')
       }
 
-      console.log('🏁 시스템 상태 확인 완료:', results)
       return results
-
-    } catch (healthError) {
-      console.error('❌ 시스템 상태 확인 실패:', healthError.message)
-      return null
+    } catch (error) {
+      console.error('❌ 시스템 상태 확인 실패:', error)
+      throw error
     }
   }
 }
 
-// ✅ 통합 API 객체
-const mainAPI = {
-  // 노트 API
-  notes: notesAPI,
-
-  // 채팅 API
-  chat: chatAPI,
-
-  // 체인 API
-  chains: chainsAPI,
-
-  // 시스템 API
-  system: systemAPI,
-
-  // 유틸리티
-  utils: apiUtils,
-
-  // 자주 사용하는 기능들 (단축 접근)
-  // 기본 채팅
-  sendMessage: chatAPI.chat,
-  // RAG 채팅
-  sendRAGMessage: chatAPI.ragChat,
-  // 노트 생성
-  createNote: notesAPI.create,
-  // 노트 목록
-  getNotes: notesAPI.getAll,
-  // 시스템 상태
-  checkHealth: systemAPI.health
-}
-
-// Mock 데이터 (개발/테스트용)
-export const mockData = {
-  notes: [
-    {
-      id: 1,
-      title: "Vue.js 학습 노트",
-      content: "# Vue.js 기초\n\n## Composition API\n- ref(), reactive()\n- computed, watch\n\n## 주요 개념\n- Component\n- Props & Emit\n- Lifecycle",
-      tags: ["vue", "frontend", "javascript"],
-      created_at: "2024-01-15T10:00:00Z",
-      updated_at: "2024-01-16T14:30:00Z"
+// ✅ 디버깅 도구 추가
+if (typeof window !== 'undefined') {
+  window.debugAPI = {
+    // 응답 구조 확인
+    async testCreate() {
+      try {
+        const response = await notesAPI.create({
+          title: 'Debug Test Note',
+          content: 'Test content',
+          tags: ['debug']
+        })
+        console.log('📋 Full Response:', response)
+        console.log('📋 Response Data:', response.data)
+        console.log('📋 Note Data:', response.data?.data?.note)
+        return response
+      } catch (error) {
+        console.error('디버그 생성 실패:', error)
+        return error
+      }
     },
-    {
-      id: 2,
-      title: "AI 프로젝트 아이디어",
-      content: "# AI 프로젝트 계획\n\n## LangChain 활용\n- RAG 시스템 구축\n- 문서 기반 QA\n\n## 기술 스택\n- Python + Flask\n- Vue.js\n- Claude API",
-      tags: ["ai", "langchain", "project"],
-      created_at: "2024-01-14T09:15:00Z",
-      updated_at: "2024-01-16T11:20:00Z"
-    }
-  ],
 
-  tags: ["vue", "frontend", "javascript", "ai", "langchain", "project", "python", "flask"],
+    async testFetch(id) {
+      try {
+        const response = await notesAPI.getOne(id)
+        console.log('📋 Full Response:', response)
+        console.log('📋 Response Data:', response.data)
+        console.log('📋 Note Data:', response.data?.data?.note)
+        return response
+      } catch (error) {
+        console.error('디버그 조회 실패:', error)
+        return error
+      }
+    },
 
-  chatHistory: [
-    {
-      id: 1,
-      message: "Vue.js에서 상태 관리는 어떻게 하나요?",
-      response: "Vue.js에서는 여러 상태 관리 방법이 있습니다:\n\n1. **Pinia** (권장)\n2. Vuex (레거시)\n3. Composables\n\n각각의 장단점을 설명드리겠습니다...",
-      timestamp: "2024-01-16T15:30:00Z"
+    async testSystemStatus() {
+      return await apiUtils.checkSystemStatus()
     }
-  ]
+  }
 }
 
-// 개발 모드 확인
-export const isDevelopment = import.meta.env.DEV
-
-// Mock 모드 설정 (백엔드가 없을 때 사용)
-export const useMockData = false
-
-// 기본 export
-export default mainAPI
-
-// 개별 export (필요시 개별 임포트 가능)
-export { notesAPI, chatAPI, chainsAPI, systemAPI, apiUtils }
+// 내보내기
+export { api, notesAPI, chatAPI, chainsAPI, systemAPI, apiUtils }
+export default api

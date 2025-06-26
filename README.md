@@ -4,7 +4,7 @@ LangChain과 Claude를 활용한 지능형 노트 시스템
 
 ## 프로젝트 개요
 
-**개발 상태:** 백엔드 100% 완성, 테스트 성공률 100%
+**개발 상태:** 백엔드 100% 완성, 프론트엔드 85% 완성, 핵심 기능 정상 작동
 **핵심 기술:** LangChain + Claude 3.5 Sonnet + RAG + Vue.js
 **목적:** 옵시디언 스타일 + Claude Artifacts 기능을 결합한 AI 노트 시스템
 
@@ -44,7 +44,7 @@ LangChain과 Claude를 활용한 지능형 노트 시스템
 * **Database** : SQLite (개발) / MySQL (프로덕션)
 * **API** : RESTful API with Blueprint 모듈화
 
-### Frontend (75% 완성)
+### Frontend (85% 완성)
 
 * **Framework** : Vue.js 3.5 (Composition API)
 * **State Management** : Pinia
@@ -82,6 +82,7 @@ ai-note-system/
         │   ├── router/              # Vue Router 설정
         │   ├── services/            # API 서비스
         │   ├── stores/              # Pinia 스토어
+        │   ├── utils/               # 디버깅 도구
         │   └── views/               # 페이지 컴포넌트
         └── package.json             # 프론트엔드 의존성
 ```
@@ -215,7 +216,7 @@ VITE_API_BASE_URL=http://localhost:5000/api
 * [X] **에러 처리** : 포괄적인 예외 처리 및 로깅
 * [X] **테스트 통과** : 모든 기능 100% 테스트 성공
 
-### Frontend (75% 완성)
+### Frontend (85% 완성)
 
 * [X] **Vue.js 3 + Vite 프로젝트 설정** : 완전한 개발 환경 구축
 * [X] **컴포넌트 구조** : common, notes, icons 디렉토리 구성
@@ -225,11 +226,35 @@ VITE_API_BASE_URL=http://localhost:5000/api
 * [X] **ESLint + Prettier** : 코드 품질 및 포맷팅 도구
 * [X] **Vitest 테스트 환경** : 컴포넌트 테스트 인프라
 * [X] **주요 Vue 컴포넌트** : ChatView, NoteEditor, NotesView, SearchView
-* [X] **API 서비스 레이어** : 백엔드 연동 준비
-* [ ] API 연동 및 데이터 흐름 구현 (진행중)
-* [ ] Toast UI Editor 통합 완성
-* [ ] 실시간 검색 및 필터링
+* [X] **API 서비스 레이어** : 완전한 백엔드 연동 구현
+* [X] **노트 CRUD 기능** : 생성, 조회, 수정, 삭제 모두 정상 작동
+* [X] **자동저장 시스템** : 실시간 자동저장 + 토글 기능
+* [X] **에러 처리 개선** : 사용자 친화적 에러 메시지
+* [X] **디버깅 도구** : 브라우저 콘솔에서 API 테스트 가능
+* [ ] 실시간 검색 및 필터링 UI 완성
 * [ ] 반응형 디자인 최적화
+* [ ] AI 채팅 인터페이스 통합
+
+## 최근 해결된 주요 버그
+
+### 2025.06.26 버그 수정 완료
+
+* **노트 생성·수정 API 연동 문제**
+  - ✅ 400 Bad Request 에러 해결
+  - ✅ axios Content-Type 헤더 이슈 수정
+  - ✅ API 응답 구조 파싱 오류 수정 (`response.data.data.note`)
+  - ✅ undefined 노트 객체 문제 해결
+
+* **자동저장 기능 개선**
+  - ✅ 자동저장 실패 시 모달창 제거
+  - ✅ 필수 필드 검증 추가 (빈 제목/내용 처리)
+  - ✅ 자동저장 토글 기능 추가
+  - ✅ 부드러운 에러 처리 구현
+
+* **개발자 경험 개선**
+  - ✅ 브라우저 콘솔 디버깅 도구 추가
+  - ✅ API 테스트 함수 (`window.testCreate()`, `window.testFlow()`)
+  - ✅ 상세한 로깅 및 에러 추적
 
 ## 테스트 결과
 
@@ -252,29 +277,49 @@ VITE_API_BASE_URL=http://localhost:5000/api
 
 1. **완전한 RAG 시스템** : 노트 기반 의미 검색 및 AI 응답 구현
 2. **엔터프라이즈급 백엔드** : MVC 패턴, 애플리케이션 팩토리, Blueprint 모듈화
-3. **프로덕션급 프론트엔드** : Vue 3 + Vite + 7000+ 패키지 생태계
-4. **완전한 개발 환경** : 테스트, 린팅, 포맷팅, 타입 검사 인프라
+3. **프로덕션급 프론트엔드** : Vue 3 + Vite + 현대적 개발 도구 완비
+4. **완전한 개발 환경** : 테스트, 린팅, 포맷팅, 디버깅 인프라
 5. **실용적 AI 통합** : Claude API와 LangChain 활용한 RAG 시스템
 6. **확장 가능한 아키텍처** : 모듈화된 구조로 유지보수성 극대화
+7. **사용자 친화적 UI** : 자동저장, 실시간 미리보기, 직관적 인터페이스
 
 ## 향후 계획
 
-### Phase 1 (현재 진행)
-* [ ] Vue.js 프론트엔드 API 연동 완성
-* [ ] 실시간 노트 검색 구현
+### Phase 1 (진행중 - 85% 완성)
+* [X] Vue.js 프론트엔드 API 연동 완성
+* [X] 노트 CRUD 기능 완전 구현
+* [X] 자동저장 시스템 완성
+* [ ] AI 채팅 인터페이스 통합
+* [ ] 실시간 노트 검색 UI 구현
 * [ ] 반응형 디자인 완성
 
 ### Phase 2 (다음 단계)
-* [ ] 실시간 협업 기능
-* [ ] 노트 버전 관리
-* [ ] 고급 검색 및 필터링
-* [ ] 사용자 인증 시스템
+* [ ] 노트 링크 시스템 (`[[노트제목]]`) 구현
+* [ ] 태그 기반 필터링 및 검색
+* [ ] 노트 간 관계 그래프 시각화
+* [ ] 실시간 협업 기능 기초
 
 ### Phase 3 (장기 계획)
+* [ ] 사용자 인증 시스템
 * [ ] 플러그인 시스템
 * [ ] 모바일 앱 개발
-* [ ] 다중 사용자 지원
-* [ ] 클라우드 배포
+* [ ] 클라우드 배포 최적화
+
+## 디버깅 도구
+
+### 브라우저 콘솔에서 사용 가능한 도구들
+
+```javascript
+// API 테스트
+window.testCreate()                    // 노트 생성 테스트
+window.testFetch(id)                   // 노트 조회 테스트
+window.testUpdate(id, data)            // 노트 수정 테스트
+window.testFlow()                      // 전체 플로우 테스트
+
+// 시스템 상태 확인
+window.debugAPI.testSystemStatus()    // 시스템 전체 상태
+window.debugAPI.analyzeResponse(res)  // API 응답 구조 분석
+```
 
 ## 라이선스
 
@@ -282,5 +327,6 @@ MIT License
 
 ---
 
-**개발 상태:** 백엔드 완전 완성, 실제 사용 가능  
-**최종 업데이트:** 2025년 6월 26일
+**개발 상태:** 백엔드 완전 완성, 프론트엔드 핵심 기능 완성, 실제 사용 가능  
+**최종 업데이트:** 2025년 6월 26일  
+**다음 마일스톤:** AI 채팅 UI 통합 및 고급 검색 기능 완성

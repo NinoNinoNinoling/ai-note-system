@@ -1,107 +1,109 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50">
+  <div class="h-screen flex flex-col bg-gray-50">
     <!-- 상단 헤더 -->
     <div class="bg-white border-b border-gray-200 px-6 py-4">
       <div class="flex items-center justify-between">
-        <!-- 뒤로가기 및 제목 -->
         <div class="flex items-center space-x-4">
           <button
             @click="handleBack"
             class="text-gray-600 hover:text-gray-900 transition-colors"
-            title="Back to Notes"
+            title="Go back to notes list"
           >
             ← Back
           </button>
+
           <h1 class="text-xl font-semibold text-gray-900">
-            {{ editorMode === 'new' ? '📝 New Note' : '✏️ Edit Note' }}
+            {{ editorMode === 'new' ? 'New Note' : 'Edit Note' }}
           </h1>
         </div>
 
         <!-- 뷰 모드 토글 -->
-        <div class="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-          <button
-            @click="setViewMode('edit')"
-            :class="[
-              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors view-mode-toggle',
-              viewMode === 'edit'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            ]"
-            title="Edit Only (Ctrl+1)"
-          >
-            📝 Edit
-          </button>
-          <button
-            @click="setViewMode('split')"
-            :class="[
-              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors view-mode-toggle',
-              viewMode === 'split'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            ]"
-            title="Split View (Ctrl+2)"
-          >
-            🔄 Split
-          </button>
-          <button
-            @click="setViewMode('preview')"
-            :class="[
-              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors view-mode-toggle',
-              viewMode === 'preview'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            ]"
-            title="Preview Only (Ctrl+3)"
-          >
-            👁️ Preview
-          </button>
-        </div>
+        <div class="flex items-center space-x-4">
+          <div class="flex bg-gray-100 rounded-lg p-1">
+            <button
+              @click="setViewMode('edit')"
+              :class="[
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors view-mode-toggle',
+                viewMode === 'edit'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              ]"
+              title="Edit Mode (Ctrl+1)"
+            >
+              📝 Edit
+            </button>
+            <button
+              @click="setViewMode('split')"
+              :class="[
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors view-mode-toggle',
+                viewMode === 'split'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              ]"
+              title="Split View (Ctrl+2)"
+            >
+              🔄 Split
+            </button>
+            <button
+              @click="setViewMode('preview')"
+              :class="[
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors view-mode-toggle',
+                viewMode === 'preview'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              ]"
+              title="Preview Only (Ctrl+3)"
+            >
+              👁️ Preview
+            </button>
+          </div>
 
-        <!-- 저장 상태 -->
-        <div v-if="viewMode !== 'preview'" class="flex items-center space-x-2 text-sm text-gray-500">
-          <span v-if="saving" class="flex items-center space-x-1">
-            <div class="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full"></div>
-            <span>Saving...</span>
-          </span>
-          <span v-else-if="autoSavePending" class="text-orange-500 flex items-center space-x-1">
-            <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-            <span>Will save in {{ Math.max(0, autoSaveCountdown) }}s...</span>
-          </span>
-          <span v-else-if="lastSaved" class="text-green-600">
-            ✅ Saved {{ formatLastSaved(lastSaved) }}
-          </span>
-          <span v-else-if="hasUnsavedChanges" class="text-orange-600">
-            ● Unsaved changes
-          </span>
-        </div>
+          <!-- 저장 상태 -->
+          <div v-if="viewMode !== 'preview'" class="flex items-center space-x-2 text-sm text-gray-500">
+            <span v-if="saving" class="flex items-center space-x-1">
+              <div class="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full"></div>
+              <span>Saving...</span>
+            </span>
+            <span v-else-if="autoSavePending" class="text-orange-500 flex items-center space-x-1">
+              <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+              <span>Will save in {{ Math.max(0, autoSaveCountdown) }}s...</span>
+            </span>
+            <span v-else-if="lastSaved" class="text-green-600">
+              ✅ Saved {{ formatLastSaved(lastSaved) }}
+            </span>
+            <span v-else-if="hasUnsavedChanges" class="text-orange-600">
+              ● Unsaved changes
+            </span>
+          </div>
 
-        <!-- 액션 버튼들 -->
-        <div class="flex items-center space-x-2">
-          <button
-            v-if="viewMode !== 'preview'"
-            @click="handleSave"
-            :disabled="saving || !hasUnsavedChanges"
-            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            💾 Save
-          </button>
+          <!-- 액션 버튼들 -->
+          <div class="flex items-center space-x-2">
+            <button
+              v-if="viewMode !== 'preview'"
+              @click="handleSave"
+              :disabled="saving || !hasUnsavedChanges"
+              class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              💾 Save
+            </button>
 
-          <button
-            v-if="editorMode === 'edit'"
-            @click="handleDelete"
-            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            🗑️ Delete
-          </button>
+            <button
+              v-if="editorMode === 'edit'"
+              @click="handleDelete"
+              class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              🗑️ Delete
+            </button>
 
-          <!-- Preview 모드일 때 추가 버튼 -->
-          <button
-            v-if="viewMode === 'preview'"
-            @click="setViewMode('edit')"
-            class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            ✏️ Edit
-          </button>
+            <!-- Preview 모드일 때 추가 버튼 -->
+            <button
+              v-if="viewMode === 'preview'"
+              @click="setViewMode('edit')"
+              class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              ✏️ Edit
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -113,65 +115,66 @@
         v-if="viewMode === 'edit' || viewMode === 'split'"
         :class="[
           'bg-white flex flex-col',
-          viewMode === 'split' ? 'w-1/2' : 'w-full'
+          viewMode === 'split' ? 'w-1/2 border-r border-gray-200' : 'w-full'
         ]"
       >
-        <div class="p-6 flex-1 flex flex-col space-y-4">
-          <!-- 제목 입력 -->
-          <div>
-            <input
-              ref="titleInput"
-              v-model="note.title"
-              type="text"
-              placeholder="Enter note title..."
-              class="w-full text-2xl font-bold text-gray-900 placeholder-gray-400 border-none outline-none resize-none bg-transparent"
-              @input="handleContentChange"
-            />
-          </div>
+        <!-- 제목 입력 -->
+        <div class="border-b border-gray-100 p-6">
+          <input
+            ref="titleInput"
+            v-model="note.title"
+            @input="handleContentChange"
+            placeholder="노트 제목을 입력하세요..."
+            class="w-full text-2xl font-bold placeholder-gray-400 border-none outline-none resize-none bg-transparent"
+          />
+        </div>
 
-          <!-- 태그 입력 -->
+        <!-- 태그 입력 -->
+        <div class="border-b border-gray-100 p-6">
           <div class="flex flex-wrap items-center gap-2">
+            <!-- 기존 태그들 -->
             <span
               v-for="tag in note.tags"
               :key="tag"
-              class="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
+              class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
             >
               #{{ tag }}
               <button
                 @click="removeTag(tag)"
-                class="ml-1 text-blue-600 hover:text-red-600 transition-colors"
+                class="text-blue-600 hover:text-blue-800 ml-1"
               >
                 ×
               </button>
             </span>
-            <div class="flex items-center space-x-2">
+
+            <!-- 새 태그 입력 -->
+            <div class="flex items-center">
               <input
                 v-model="newTag"
-                type="text"
-                placeholder="Add tag..."
-                class="px-2 py-1 border border-gray-300 rounded text-sm"
                 @keydown.enter="addTag"
                 @keydown.space="addTag"
+                placeholder="Add tag..."
+                class="text-xs border border-gray-200 rounded-full px-2.5 py-1 outline-none focus:border-blue-500 bg-white min-w-20"
               />
               <button
                 @click="addTag"
-                class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                class="ml-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
               >
                 + Add
               </button>
             </div>
           </div>
+        </div>
 
-          <!-- 내용 입력 -->
-          <div class="flex-1">
-            <textarea
-              ref="contentTextarea"
-              v-model="note.content"
-              placeholder="Start writing your note..."
-              class="w-full h-full text-gray-900 placeholder-gray-400 border-none outline-none resize-none bg-transparent font-mono leading-relaxed"
-              @input="handleContentChange"
-            ></textarea>
-          </div>
+        <!-- 콘텐츠 입력 -->
+        <div class="flex-1 p-6">
+          <textarea
+            ref="contentTextarea"
+            v-model="note.content"
+            @input="handleContentChange"
+            placeholder="Start writing your note..."
+            class="w-full h-full placeholder-gray-400 border-none outline-none resize-none text-gray-900 leading-relaxed bg-transparent"
+          ></textarea>
         </div>
       </div>
 
@@ -179,7 +182,7 @@
       <div
         v-if="viewMode === 'preview' || viewMode === 'split'"
         :class="[
-          'bg-gray-50 border-l border-gray-200 overflow-y-auto',
+          'bg-gray-50 flex flex-col overflow-hidden',
           viewMode === 'split' ? 'w-1/2' : 'w-full'
         ]"
       >
@@ -197,7 +200,7 @@
           </div>
         </div>
 
-        <div class="p-6">
+        <div class="p-6 overflow-y-auto flex-1">
           <!-- 미리보기 제목 -->
           <h1 class="text-2xl font-bold text-gray-900 mb-4">
             {{ note.title || 'Untitled' }}
@@ -234,7 +237,13 @@
 
       <div class="flex items-center space-x-4">
         <span>Markdown</span>
-        <span>Auto-save: {{ autoSave ? 'On' : 'Off' }}</span>
+        <button
+          @click="toggleAutoSave"
+          :class="autoSave ? 'text-green-600' : 'text-gray-400'"
+          class="hover:text-blue-600 transition-colors"
+        >
+          Auto-save: {{ autoSave ? 'On' : 'Off' }}
+        </button>
         <span class="text-gray-400">Ctrl+1,2,3: View modes</span>
       </div>
     </div>
@@ -268,7 +277,6 @@ const note = ref({
 
 const originalNote = ref({})
 const newTag = ref('')
-// ✅ showPreview 변수 제거 (ESLint 오류 해결)
 const viewMode = ref('edit') // 'edit', 'split', 'preview'
 const saving = ref(false)
 const lastSaved = ref(null)
@@ -359,7 +367,7 @@ const determineEditorMode = () => {
 const initializeNewNote = () => {
   note.value = {
     id: null,
-    title: '',
+    title: 'Untitled', // ✅ 기본 제목 설정
     content: '',
     tags: []
   }
@@ -369,6 +377,8 @@ const initializeNewNote = () => {
   // 제목 입력에 포커스
   nextTick(() => {
     titleInput.value?.focus()
+    // 기본 제목 전체 선택 (사용자가 바로 입력할 수 있도록)
+    titleInput.value?.select()
   })
 }
 
@@ -426,8 +436,14 @@ const handleContentChange = () => {
   }
 }
 
-// 자동저장 스케줄링
+// ✅ 자동저장 스케줄링 - 에러 처리 개선
 const scheduleAutoSave = () => {
+  // ✅ 자동저장 전 기본 검증
+  if (!note.value.title?.trim() && !note.value.content?.trim()) {
+    console.log('⚠️ 자동저장 스케줄링 건너뛰기: 제목과 내용이 모두 비어있음')
+    return
+  }
+
   // 기존 타이머 취소
   if (autoSaveTimeout.value) {
     clearTimeout(autoSaveTimeout.value)
@@ -453,9 +469,10 @@ const scheduleAutoSave = () => {
   // 3초 후 자동저장
   autoSaveTimeout.value = setTimeout(async () => {
     try {
-      await handleSave(true) // 자동저장 플래그
+      await handleSave(true) // ✅ 자동저장 플래그
     } catch (autoSaveError) {
-      console.error('자동저장 실패:', autoSaveError)
+      // ✅ 자동저장 에러는 조용히 처리
+      console.warn('⚠️ 자동저장 스케줄링 에러:', autoSaveError.message)
     } finally {
       autoSavePending.value = false
       autoSaveTimeout.value = null
@@ -463,9 +480,30 @@ const scheduleAutoSave = () => {
   }, 3000)
 }
 
-// 저장 처리
+// ✅ 저장 처리 - 자동저장 실패 시 모달 제거
 const handleSave = async (isAutoSave = false) => {
   if (saving.value) return
+
+  // ✅ 자동저장 시 필수 필드 검증 추가
+  if (isAutoSave) {
+    // 자동저장은 제목과 내용이 모두 있을 때만 실행
+    if (!note.value.title?.trim() || !note.value.content?.trim()) {
+      console.log('⚠️ 자동저장 건너뛰기: 제목 또는 내용이 비어있음')
+      autoSavePending.value = false
+      return
+    }
+  } else {
+    // 수동 저장 시에도 검증 (기본값 자동 설정)
+    if (editorMode.value === 'new') {
+      if (!note.value.title?.trim()) {
+        note.value.title = 'Untitled'
+      }
+      if (!note.value.content?.trim()) {
+        // 빈 내용도 허용 (백엔드에서 기본값 처리)
+        note.value.content = ''
+      }
+    }
+  }
 
   try {
     saving.value = true
@@ -485,7 +523,14 @@ const handleSave = async (isAutoSave = false) => {
 
     let savedNote
     if (editorMode.value === 'new') {
-      savedNote = await notesStore.createNote(note.value)
+      // ✅ 새 노트 생성 시 기본값 보장
+      const noteToCreate = {
+        title: note.value.title?.trim() || 'Untitled',
+        content: note.value.content?.trim() || '',
+        tags: Array.isArray(note.value.tags) ? note.value.tags : []
+      }
+
+      savedNote = await notesStore.createNote(noteToCreate)
       console.log('✅ 새 노트 생성 완료:', savedNote.id)
 
       // 새 노트 생성 후 편집 모드로 전환
@@ -495,7 +540,14 @@ const handleSave = async (isAutoSave = false) => {
       // URL 업데이트 (히스토리 추가 없이)
       router.replace(`/notes/${savedNote.id}`)
     } else {
-      savedNote = await notesStore.updateNote(currentNoteId.value, note.value)
+      // ✅ 노트 수정 시에도 기본값 보장
+      const noteToUpdate = {
+        title: note.value.title?.trim() || 'Untitled',
+        content: note.value.content?.trim() || '',
+        tags: Array.isArray(note.value.tags) ? note.value.tags : []
+      }
+
+      savedNote = await notesStore.updateNote(currentNoteId.value, noteToUpdate)
       console.log('✅ 노트 수정 완료:', savedNote.id)
     }
 
@@ -506,11 +558,28 @@ const handleSave = async (isAutoSave = false) => {
 
     if (!isAutoSave) {
       console.log('💾 수동 저장 완료')
+      // 수동 저장 성공 시 부드러운 알림 (선택사항)
+      if (window.app && window.app.showNotification) {
+        window.app.showNotification('노트가 저장되었습니다 ✅', 'success')
+      }
+    } else {
+      console.log('🔄 자동저장 완료')
     }
 
   } catch (saveError) {
     console.error('❌ 저장 실패:', saveError)
-    alert(`저장에 실패했습니다: ${saveError.message}`)
+
+    // ✅ 자동저장 실패 시에는 모달을 띄우지 않음
+    if (isAutoSave) {
+      console.warn('⚠️ 자동저장 실패 - 조용히 처리:', saveError.message)
+      // 자동저장 실패 시 조용한 알림만 (선택사항)
+      if (window.app && window.app.showNotification) {
+        window.app.showNotification('자동저장 실패 - 수동으로 저장해주세요', 'warning')
+      }
+    } else {
+      // 수동 저장 실패 시에만 모달 표시
+      alert(`저장에 실패했습니다: ${saveError.message}`)
+    }
   } finally {
     saving.value = false
   }
@@ -544,6 +613,29 @@ const handleBack = async () => {
   router.push('/notes')
 }
 
+// ✅ 자동저장 토글 함수
+const toggleAutoSave = () => {
+  autoSave.value = !autoSave.value
+
+  // 자동저장을 끄면 진행 중인 자동저장 취소
+  if (!autoSave.value) {
+    if (autoSaveTimeout.value) {
+      clearTimeout(autoSaveTimeout.value)
+      autoSaveTimeout.value = null
+    }
+    if (countdownInterval.value) {
+      clearInterval(countdownInterval.value)
+      countdownInterval.value = null
+    }
+    autoSavePending.value = false
+  }
+
+  // 사용자 설정 저장
+  localStorage.setItem('noteEditor-autoSave', autoSave.value.toString())
+
+  console.log(`🔄 자동저장 ${autoSave.value ? '활성화' : '비활성화'}`)
+}
+
 // 키보드 단축키
 const handleKeyboard = (e) => {
   if (e.ctrlKey || e.metaKey) {
@@ -564,12 +656,6 @@ const handleKeyboard = (e) => {
 }
 
 // 뷰 모드 함수들
-// eslint-disable-next-line no-unused-vars
-const focusContent = () => {
-  nextTick(() => {
-    contentTextarea.value?.focus()
-  })
-}
 const setViewMode = (mode) => {
   viewMode.value = mode
 
@@ -611,9 +697,9 @@ const getViewModeLabel = () => {
   }
 }
 
-// ✅ 간단한 라우트 변경 감지
+// 라우트 변경 감지
 watch(() => route.params.id, async (newId, oldId) => {
-  // 🛡️ 같은 ID면 무시
+  // 같은 ID면 무시
   if (newId === oldId) {
     return
   }
@@ -656,6 +742,12 @@ onMounted(async () => {
     viewMode.value = savedViewMode
   }
 
+  // 저장된 자동저장 설정 복원
+  const savedAutoSave = localStorage.getItem('noteEditor-autoSave')
+  if (savedAutoSave !== null) {
+    autoSave.value = savedAutoSave === 'true'
+  }
+
   // 키보드 이벤트 리스너
   window.addEventListener('keydown', handleKeyboard)
 
@@ -671,7 +763,7 @@ onMounted(async () => {
 onUnmounted(() => {
   console.log('🧹 NoteEditor 컴포넌트 정리 중...')
 
-  // 🧹 모든 타이머 정리
+  // 모든 타이머 정리
   if (autoSaveTimeout.value) {
     clearTimeout(autoSaveTimeout.value)
     autoSaveTimeout.value = null
