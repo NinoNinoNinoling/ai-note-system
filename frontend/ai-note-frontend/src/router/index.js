@@ -8,76 +8,33 @@ const routes = [
   {
     path: '/notes',
     name: 'Notes',
-    component: () => import('../views/NotesView.vue'),
-    meta: {
-      title: 'My Notes'
-    }
+    component: () => import('../views/NotesView.vue')
   },
   {
     path: '/notes/new',
     name: 'NewNote',
-    component: () => import('../views/NoteEditor.vue'),
-    meta: {
-      title: 'New Note'
-    }
+    component: () => import('../views/NoteEditor.vue')
   },
   {
     path: '/notes/:id',
-    name: 'EditNote',
-    component: () => import('../views/NoteEditor.vue'),
-    props: true,
-    meta: {
-      title: 'Edit Note'
-    }
+    name: 'NoteDetail',
+    component: () => import('../views/NoteEditor.vue')
   },
   {
     path: '/chat',
     name: 'Chat',
-    component: () => import('../views/ChatView.vue'),
-    meta: {
-      title: 'AI Chat'
-    }
+    component: () => import('../views/ChatView.vue')
   },
   {
     path: '/search',
     name: 'Search',
-    component: () => import('../views/SearchView.vue'),
-    meta: {
-      title: 'Search Notes'
-    }
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('../views/NotFound.vue'),
-    meta: {
-      title: 'Page Not Found'
-    }
+    component: () => import('../views/SearchView.vue')
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
-  scrollBehavior(to, from, savedPosition) {
-    if (savedPosition) {
-      return savedPosition
-    } else {
-      return { top: 0 }
-    }
-  }
-})
-
-// 네비게이션 가드
-router.beforeEach((to, from, next) => {
-  // 페이지 타이틀 설정
-  if (to.meta.title) {
-    document.title = `${to.meta.title} - AI Note System`
-  } else {
-    document.title = 'AI Note System'
-  }
-
-  next()
+  routes
 })
 
 export default router

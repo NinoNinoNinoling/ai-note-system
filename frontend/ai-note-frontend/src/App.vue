@@ -6,12 +6,16 @@
         <div class="flex justify-between items-center h-16">
           <!-- 로고 및 네비게이션 -->
           <div class="flex items-center space-x-8">
-            <div class="flex items-center">
+            <!-- 클릭 가능한 로고 -->
+            <router-link
+              to="/notes"
+              class="flex items-center hover:opacity-80 transition-opacity cursor-pointer"
+            >
               <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <span class="text-white font-bold text-lg">🧠</span>
               </div>
-              <h1 class="ml-3 text-xl font-bold text-gray-900">AI Note System</h1>
-            </div>
+              <h1 class="ml-3 text-xl font-bold text-gray-900">AI 노트 시스템</h1>
+            </router-link>
 
             <!-- 네비게이션 메뉴 -->
             <nav class="hidden md:flex space-x-8">
@@ -20,21 +24,21 @@
                 class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 :class="{ 'text-blue-600 bg-blue-50': $route.path.startsWith('/notes') }"
               >
-                📝 Notes
+                📝 노트
               </router-link>
               <router-link
                 to="/chat"
                 class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 :class="{ 'text-blue-600 bg-blue-50': $route.path === '/chat' }"
               >
-                🤖 AI Chat
+                🤖 AI 채팅
               </router-link>
               <router-link
                 to="/search"
                 class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 :class="{ 'text-blue-600 bg-blue-50': $route.path === '/search' }"
               >
-                🔍 Search
+                🔍 검색
               </router-link>
             </nav>
           </div>
@@ -47,7 +51,7 @@
                 v-model="quickSearch"
                 @keyup.enter="performQuickSearch"
                 type="text"
-                placeholder="Quick search..."
+                placeholder="빠른 검색..."
                 class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
               <button
@@ -64,7 +68,7 @@
               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
             >
               <span>✏️</span>
-              <span>New Note</span>
+              <span>새 노트</span>
             </button>
           </div>
         </div>
@@ -84,7 +88,7 @@
     >
       <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-        <span class="text-gray-700">Loading...</span>
+        <span class="text-gray-700">로딩 중...</span>
       </div>
     </div>
 
@@ -166,10 +170,10 @@ onMounted(async () => {
     setLoading(true)
     // 초기 데이터 로드
     await notesStore.fetchNotes()
-    showNotification('Welcome to AI Note System! 🎉', 'success')
+    showNotification('AI 노트 시스템에 오신 것을 환영합니다! 🎉', 'success')
   } catch (error) {
     console.error('초기화 에러:', error)
-    showNotification('Failed to load initial data', 'error')
+    showNotification('초기 데이터 로드에 실패했습니다', 'error')
   } finally {
     setLoading(false)
   }

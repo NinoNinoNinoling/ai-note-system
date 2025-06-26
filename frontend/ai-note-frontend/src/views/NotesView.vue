@@ -1,54 +1,54 @@
 <template>
-  <div class="notes-view">
+  <div class="space-y-6">
     <!-- 페이지 헤더 -->
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+    <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">My Notes</h1>
-        <p class="text-gray-600">{{ noteCount }} notes</p>
+        <h1 class="text-3xl font-bold text-gray-900">📝 내 노트</h1>
+        <p class="text-gray-600 mt-1">
+          {{ noteCount > 0 ? `총 ${noteCount}개의 노트` : '아직 노트가 없습니다' }}
+        </p>
       </div>
 
-      <div class="flex items-center space-x-3 mt-4 lg:mt-0">
+      <div class="flex items-center space-x-3">
         <button
           @click="refreshNotes"
           :disabled="loading"
-          class="px-4 py-2 text-gray-600 hover:text-blue-600 border border-gray-300 rounded-lg hover:border-blue-300 transition-colors disabled:opacity-50"
+          class="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
         >
-          <span class="flex items-center space-x-2">
-            <span>🔄</span>
-            <span>Refresh</span>
-          </span>
+          <span class="text-lg">🔄</span>
+          <span>새로고침</span>
         </button>
 
         <router-link
           to="/notes/new"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+          class="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
         >
           <span>✏️</span>
-          <span>New Note</span>
+          <span>새 노트</span>
         </router-link>
       </div>
     </div>
 
     <!-- 로딩 상태 -->
-    <div v-if="loading" class="flex justify-center items-center py-12">
-      <div class="flex items-center space-x-3">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span class="text-gray-600">Loading notes...</span>
+    <div v-if="loading" class="flex items-center justify-center py-12">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p class="mt-4 text-gray-600">노트를 불러오는 중...</p>
       </div>
     </div>
 
     <!-- 에러 상태 -->
-    <div v-else-if="error" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-6">
       <div class="flex items-center">
-        <span class="text-yellow-600 text-2xl mr-3">⚠️</span>
+        <span class="text-2xl mr-3">⚠️</span>
         <div>
-          <h3 class="text-yellow-800 font-medium">Backend server not available</h3>
-          <p class="text-yellow-600 text-sm mt-1">Showing sample data. Please start the backend server.</p>
+          <h3 class="text-lg font-medium text-red-800">연결 오류</h3>
+          <p class="text-red-600 text-sm">백엔드 서버를 시작해주세요.</p>
           <button
             @click="refreshNotes"
-            class="mt-2 text-yellow-600 hover:text-yellow-800 font-medium text-sm underline"
+            class="mt-2 text-red-600 hover:text-red-800 font-medium text-sm underline"
           >
-            Try again
+            다시 시도
           </button>
         </div>
       </div>
@@ -57,14 +57,14 @@
     <!-- 노트가 없는 경우 -->
     <div v-else-if="notes.length === 0" class="text-center py-12">
       <div class="text-6xl mb-4">📝</div>
-      <h3 class="text-xl font-medium text-gray-900 mb-2">No notes yet</h3>
-      <p class="text-gray-600 mb-6">Start by creating your first note!</p>
+      <h3 class="text-xl font-medium text-gray-900 mb-2">아직 노트가 없습니다</h3>
+      <p class="text-gray-600 mb-6">첫 번째 노트를 작성해보세요!</p>
       <router-link
         to="/notes/new"
         class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
       >
         <span class="mr-2">✏️</span>
-        Create your first note
+        첫 노트 작성하기
       </router-link>
     </div>
 
@@ -80,21 +80,21 @@
         <div class="p-6 pb-4">
           <div class="flex items-start justify-between mb-3">
             <h3 class="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
-              {{ note.title || 'Untitled Note' }}
+              {{ note.title || '제목 없음' }}
             </h3>
 
             <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 @click.stop="editNote(note)"
                 class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Edit note"
+                title="노트 편집"
               >
                 ✏️
               </button>
               <button
                 @click.stop="deleteNote(note)"
                 class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Delete note"
+                title="노트 삭제"
               >
                 🗑️
               </button>
@@ -127,7 +127,7 @@
             </div>
             <div class="flex items-center space-x-1">
               <span>📊</span>
-              <span>{{ getWordCount(note.content) }} words</span>
+              <span>{{ getWordCount(note.content) }}단어</span>
             </div>
           </div>
         </div>
@@ -164,7 +164,7 @@ const editNote = (note) => {
 }
 
 const deleteNote = async (note) => {
-  if (confirm(`"${note.title || 'Untitled Note'}"를 삭제하시겠습니까?`)) {
+  if (confirm(`"${note.title || '제목 없는 노트'}"를 삭제하시겠습니까?`)) {
     try {
       await notesStore.deleteNote(note.id)
       console.log('✅ 노트 삭제 완료')
@@ -175,7 +175,7 @@ const deleteNote = async (note) => {
 }
 
 const getContentPreview = (content) => {
-  if (!content) return 'No content'
+  if (!content) return '내용 없음'
 
   const plainText = content
     .replace(/#{1,6}\s/g, '')
@@ -203,13 +203,13 @@ const formatDate = (dateString) => {
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
   if (diffDays === 0) {
-    return 'Today'
+    return '오늘'
   } else if (diffDays === 1) {
-    return 'Yesterday'
+    return '어제'
   } else if (diffDays < 7) {
-    return `${diffDays}d ago`
+    return `${diffDays}일 전`
   } else {
-    return date.toLocaleDateString()
+    return date.toLocaleDateString('ko-KR')
   }
 }
 

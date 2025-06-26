@@ -8,7 +8,7 @@
             <span class="text-white text-sm font-bold">🧠</span>
           </div>
           <div>
-            <h1 class="text-xl font-semibold text-gray-900">Knowledge Assistant</h1>
+            <h1 class="text-xl font-semibold text-gray-900">지식 어시스턴트</h1>
             <p class="text-sm text-gray-500">{{ totalNotes }}개 노트를 기반으로 한 지능형 검색 및 분석</p>
           </div>
         </div>
@@ -18,9 +18,9 @@
           <!-- 노트 상태 표시 -->
           <div class="flex items-center space-x-2 text-sm text-gray-600">
             <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>{{ totalNotes }} Notes</span>
+            <span>{{ totalNotes }}개 노트</span>
             <span>•</span>
-            <span>{{ totalWords }} Words</span>
+            <span>{{ totalWords }}단어</span>
           </div>
 
           <!-- 액션 버튼들 -->
@@ -29,7 +29,7 @@
             :disabled="isRefreshing"
             class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
           >
-            {{ isRefreshing ? '🔄 새로고침...' : '🔄 새로고침' }}
+            {{ isRefreshing ? '🔄 새로고침 중...' : '🔄 새로고침' }}
           </button>
 
           <button
@@ -62,103 +62,117 @@
 
             <!-- 추천 질문들 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+              <!-- 지식 질문 -->
               <div class="space-y-3">
-                <h4 class="text-sm font-medium text-gray-700">📚 지식 탐색</h4>
-                <button
-                  v-for="suggestion in knowledgeQuestions"
-                  :key="suggestion"
-                  @click="sendSuggestion(suggestion)"
-                  class="w-full text-left p-4 bg-white border border-gray-200 rounded-xl hover:border-purple-300 hover:bg-purple-50 transition-all duration-200 group"
-                >
-                  <div class="text-sm text-gray-900 group-hover:text-purple-700">{{ suggestion }}</div>
-                </button>
+                <h4 class="text-sm font-medium text-gray-700">💡 지식 탐색 질문</h4>
+                <div class="space-y-2">
+                  <button
+                    v-for="question in knowledgeQuestions"
+                    :key="question"
+                    @click="sendQuickMessage(question)"
+                    class="w-full text-left p-3 text-sm text-gray-700 bg-white hover:bg-blue-50 hover:text-blue-700 rounded-lg border border-gray-200 hover:border-blue-300 transition-all"
+                  >
+                    {{ question }}
+                  </button>
+                </div>
               </div>
 
+              <!-- 분석 질문 -->
               <div class="space-y-3">
-                <h4 class="text-sm font-medium text-gray-700">🔍 분석 및 연결</h4>
-                <button
-                  v-for="suggestion in analysisQuestions"
-                  :key="suggestion"
-                  @click="sendSuggestion(suggestion)"
-                  class="w-full text-left p-4 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
-                >
-                  <div class="text-sm text-gray-900 group-hover:text-blue-700">{{ suggestion }}</div>
-                </button>
+                <h4 class="text-sm font-medium text-gray-700">📊 분석 질문</h4>
+                <div class="space-y-2">
+                  <button
+                    v-for="question in analysisQuestions"
+                    :key="question"
+                    @click="sendQuickMessage(question)"
+                    class="w-full text-left p-3 text-sm text-gray-700 bg-white hover:bg-green-50 hover:text-green-700 rounded-lg border border-gray-200 hover:border-green-300 transition-all"
+                  >
+                    {{ question }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- 메시지 리스트 -->
-          <div v-for="(message, index) in messages" :key="index" class="animate-fadeIn">
+          <!-- 채팅 메시지들 -->
+          <div v-for="(message, index) in messages" :key="index" class="flex">
             <!-- 사용자 메시지 -->
-            <div v-if="message.type === 'user'" class="flex justify-end mb-6">
-              <div class="max-w-2xl bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-3 rounded-2xl rounded-br-md">
-                <div class="text-sm opacity-90 mb-1">You</div>
-                <div>{{ message.content }}</div>
+            <div v-if="message.type === 'user'" class="flex justify-end w-full">
+              <div class="max-w-2xl">
+                <div class="bg-blue-600 text-white rounded-2xl rounded-br-md px-6 py-4">
+                  <p class="text-sm leading-relaxed">{{ message.content }}</p>
+                </div>
+                <div class="text-xs text-gray-500 mt-1 text-right">
+                  {{ formatTime(message.timestamp) }}
+                </div>
               </div>
             </div>
 
-            <!-- AI 응답 -->
-            <div v-else class="flex justify-start mb-6">
-              <div class="flex space-x-4 max-w-4xl w-full">
-                <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span class="text-white text-sm">🧠</span>
-                </div>
-                <div class="flex-1">
-                  <div class="bg-white border border-gray-200 px-5 py-4 rounded-2xl rounded-tl-md shadow-sm">
-                    <div class="text-xs text-gray-500 mb-2">Knowledge Assistant</div>
+            <!-- AI 메시지 -->
+            <div v-else class="flex justify-start w-full">
+              <div class="max-w-4xl">
+                <div class="flex items-start space-x-3">
+                  <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg flex items-center justify-center mt-1">
+                    <span class="text-white text-xs font-bold">🧠</span>
+                  </div>
 
-                    <div
-                      v-if="message.content"
-                      class="prose prose-sm max-w-none"
-                      v-html="formatMessage(message.content)"
-                    ></div>
-
-                    <div v-if="message.isLoading" class="flex items-center space-x-3">
-                      <div class="flex space-x-1">
-                        <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                        <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                        <div class="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                  <div class="flex-1">
+                    <div class="bg-white rounded-2xl rounded-bl-md px-6 py-4 shadow-sm border border-gray-100">
+                      <!-- 로딩 상태 -->
+                      <div v-if="message.isLoading" class="flex items-center space-x-3 text-purple-600">
+                        <div class="animate-spin rounded-full h-4 w-4 border-2 border-purple-300 border-t-purple-600"></div>
+                        <span class="text-sm text-gray-500">노트들을 분석하고 있습니다...</span>
                       </div>
-                      <span class="text-sm text-gray-500">노트들을 분석하고 있습니다...</span>
-                    </div>
 
-                    <!-- 관련 노트들 표시 -->
-                    <div v-if="message.relatedNotes && message.relatedNotes.length > 0" class="mt-4 pt-3 border-t border-gray-100">
-                      <div class="text-xs text-gray-500 mb-2">📝 관련 노트</div>
-                      <div class="flex flex-wrap gap-2">
+                      <!-- AI 응답 내용 -->
+                      <div v-else>
+                        <div
+                          class="prose max-w-none text-sm leading-relaxed"
+                          v-html="formatMessage(message.content)"
+                        ></div>
+
+                        <!-- 관련 노트들 표시 -->
+                        <div v-if="message.relatedNotes && message.relatedNotes.length > 0" class="mt-4 pt-3 border-t border-gray-100">
+                          <div class="text-xs text-gray-500 mb-2">📝 관련 노트</div>
+                          <div class="flex flex-wrap gap-2">
+                            <button
+                              v-for="note in message.relatedNotes.slice(0, 3)"
+                              :key="note.id"
+                              @click="openNote(note.id)"
+                              class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs hover:bg-purple-100 transition-colors"
+                            >
+                              📄 {{ note.title }}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 액션 버튼들 -->
+                      <div v-if="message.content && !message.isLoading" class="flex space-x-2 mt-3">
                         <button
-                          v-for="note in message.relatedNotes.slice(0, 3)"
-                          :key="note.id"
-                          @click="openNote(note.id)"
-                          class="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs hover:bg-purple-100 transition-colors"
+                          @click="copyMessage(message.content)"
+                          class="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                         >
-                          📄 {{ note.title }}
+                          📋 복사
+                        </button>
+                        <button
+                          @click="continueConversation(message.content)"
+                          class="text-xs px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                        >
+                          💭 더 자세히
+                        </button>
+                        <button
+                          @click="findRelatedNotes(message.content)"
+                          class="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                        >
+                          🔗 관련 노트
                         </button>
                       </div>
                     </div>
-                  </div>
 
-                  <!-- 액션 버튼들 -->
-                  <div v-if="message.content && !message.isLoading" class="flex space-x-2 mt-3">
-                    <button
-                      @click="copyMessage(message.content)"
-                      class="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      📋 복사
-                    </button>
-                    <button
-                      @click="continueConversation(message.content)"
-                      class="text-xs px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
-                    >
-                      💭 더 자세히
-                    </button>
-                    <button
-                      @click="findRelatedNotes(message.content)"
-                      class="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      🔗 관련 노트
-                    </button>
+                    <div class="text-xs text-gray-500 mt-1">
+                      {{ formatTime(message.timestamp) }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -304,7 +318,8 @@ const totalNotes = computed(() => notes.value.length)
 
 const totalWords = computed(() => {
   return notes.value.reduce((total, note) => {
-    const wordCount = note.content ? note.content.split(/\s+/).filter(word => word.length > 0).length : 0
+    const wordCount = note.content ?
+      note.content.split(/\s+/).filter(word => word.length > 0).length : 0
     return total + wordCount
   }, 0)
 })
@@ -316,36 +331,24 @@ const recentNotes = computed(() => {
 })
 
 const popularTags = computed(() => {
-  const tagCount = {}
+  const tagCounts = {}
   notes.value.forEach(note => {
     if (note.tags) {
       note.tags.forEach(tag => {
-        tagCount[tag] = (tagCount[tag] || 0) + 1
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1
       })
     }
   })
 
-  return Object.entries(tagCount)
+  return Object.entries(tagCounts)
     .sort(([,a], [,b]) => b - a)
     .map(([tag]) => tag)
+    .slice(0, 10)
 })
 
-// 메서드
-const refreshNotes = async () => {
-  isRefreshing.value = true
-  try {
-    await notesStore.fetchNotes()
-    notes.value = notesStore.notes
-    console.log(`🔄 노트 새로고침 완료: ${notes.value.length}개`)
-  } catch (error) {
-    console.error('노트 새로고침 실패:', error)
-  } finally {
-    isRefreshing.value = false
-  }
-}
-
-const sendSuggestion = (suggestion) => {
-  currentMessage.value = suggestion
+// 메서드들
+const sendQuickMessage = (message) => {
+  currentMessage.value = message
   sendMessage()
 }
 
@@ -375,15 +378,13 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    // API 동적 import - 올바른 구조 사용
-    const apiModule = await import('../services/api.js')
-    const { chatAPI } = apiModule
+    // API 호출
+    const { chatAPI } = await import('../services/api.js')
 
-    // RAG 채팅 사용 (전체 노트 기반)
-    console.log('🧠 전체 노트 기반 RAG 질문:', userMessage)
+    console.log('🧠 RAG 채팅 요청:', userMessage)
     const response = await chatAPI.ragChat(userMessage)
 
-    // AI 응답 업데이트 - 안전한 응답 파싱
+    // AI 응답 업데이트
     const aiResponse = response.data?.response ||
                       response.data?.data?.response ||
                       response.data?.ai_response ||
@@ -395,7 +396,7 @@ const sendMessage = async () => {
       content: aiResponse,
       isLoading: false,
       timestamp: new Date(),
-      relatedNotes: await findRelevantNotes(userMessage) // 관련 노트 찾기
+      relatedNotes: await findRelevantNotes(userMessage)
     }
 
     console.log('✅ AI 응답 완료')
@@ -416,10 +417,8 @@ const sendMessage = async () => {
 
 const findRelevantNotes = async (query) => {
   try {
-    const apiModule = await import('../services/api.js')
-    const { notesAPI } = apiModule
+    const { notesAPI } = await import('../services/api.js')
 
-    // 올바른 검색 데이터 구조 사용
     const searchData = {
       query: query.trim(),
       limit: 5
@@ -427,14 +426,11 @@ const findRelevantNotes = async (query) => {
 
     const searchResult = await notesAPI.search(searchData)
 
-    // 안전한 응답 파싱
     let notes = []
     if (searchResult.data?.data?.results) {
       notes = searchResult.data.data.results
     } else if (searchResult.data?.results) {
       notes = searchResult.data.results
-    } else if (searchResult.data?.notes) {
-      notes = searchResult.data.notes
     } else if (Array.isArray(searchResult.data)) {
       notes = searchResult.data
     }
@@ -470,74 +466,99 @@ const formatMessage = (content) => {
     .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-purple-700">$1</code>')
     .replace(/###\s+(.*$)/gm, '<h3 class="text-lg font-semibold mt-4 mb-2 text-gray-900">$1</h3>')
     .replace(/##\s+(.*$)/gm, '<h2 class="text-xl font-semibold mt-6 mb-3 text-gray-900">$1</h2>')
-    .replace(/#\s+(.*$)/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 text-gray-900">$1</h1>')
-    .replace(/\n\n/g, '</p><p class="mb-3">')
+    .replace(/#\s+(.*$)/gm, '<h1 class="text-2xl font-bold mt-8 mb-4 text-gray-900">$1</h1>')
     .replace(/\n/g, '<br>')
-    .replace(/^/, '<p class="mb-3">')
-    .replace(/$/, '</p>')
+}
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    }
+  })
 }
 
 const copyMessage = async (content) => {
   try {
     await navigator.clipboard.writeText(content)
-    console.log('📋 클립보드에 복사됨')
+    // 간단한 피드백 (선택사항)
+    console.log('✅ 클립보드에 복사됨')
   } catch (error) {
-    console.error('클립보드 복사 실패:', error)
+    console.error('❌ 복사 실패:', error)
   }
 }
 
 const continueConversation = (content) => {
-  currentMessage.value = `"${content.substring(0, 50)}..." 이 내용에 대해 더 자세히 설명해줘`
+  currentMessage.value = `"${content.slice(0, 100)}..." 이것에 대해 더 자세히 설명해줘`
   sendMessage()
 }
 
 const findRelatedNotes = async (content) => {
-  const keywords = content.split(' ').slice(0, 5).join(' ')
-  currentMessage.value = `"${keywords}"와 관련된 노트들을 찾아서 정리해줘`
-  sendMessage()
-}
-
-const searchByTag = (tag) => {
-  currentMessage.value = `#${tag} 태그가 있는 노트들에 대해 알려줘`
-  sendMessage()
+  const relatedNotes = await findRelevantNotes(content)
+  if (relatedNotes.length > 0) {
+    const notesList = relatedNotes.map(note => `• ${note.title}`).join('\n')
+    currentMessage.value = `다음 노트들과 관련된 내용을 분석해줘:\n${notesList}`
+    sendMessage()
+  }
 }
 
 const openNote = (noteId) => {
   router.push(`/notes/${noteId}`)
 }
 
-const clearHistory = () => {
-  messages.value = []
-  console.log('🗑️ 채팅 기록 초기화됨')
+const searchByTag = (tag) => {
+  router.push(`/search?q=${encodeURIComponent('#' + tag)}`)
 }
 
-const scrollToBottom = () => {
-  nextTick(() => {
-    const container = chatContainer.value
-    if (container) {
-      container.scrollTop = container.scrollHeight
-    }
-  })
+const refreshNotes = async () => {
+  isRefreshing.value = true
+  try {
+    await notesStore.fetchNotes()
+    notes.value = notesStore.notes
+    console.log('✅ 노트 새로고침 완료')
+  } catch (error) {
+    console.error('❌ 노트 새로고침 실패:', error)
+  } finally {
+    isRefreshing.value = false
+  }
+}
+
+const clearHistory = () => {
+  if (confirm('대화 기록을 모두 삭제하시겠습니까?')) {
+    messages.value = []
+    console.log('✅ 대화 기록 삭제됨')
+  }
+}
+
+const formatTime = (date) => {
+  return new Intl.DateTimeFormat('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return ''
   const date = new Date(dateString)
   const now = new Date()
-  const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
+  const diffMs = now - date
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffDays === 0) return '오늘'
-  if (diffDays === 1) return '어제'
-  if (diffDays < 7) return `${diffDays}일 전`
-  return date.toLocaleDateString()
+  if (diffDays === 0) {
+    return '오늘'
+  } else if (diffDays === 1) {
+    return '어제'
+  } else if (diffDays < 7) {
+    return `${diffDays}일 전`
+  } else {
+    return date.toLocaleDateString('ko-KR')
+  }
 }
 
 // 라이프사이클
 onMounted(async () => {
-  console.log('🚀 Knowledge Assistant 초기화')
   await refreshNotes()
 
-  // 포커스
+  // 메시지 입력창에 포커스
   nextTick(() => {
     messageInput.value?.focus()
   })
@@ -546,58 +567,19 @@ onMounted(async () => {
 
 <style scoped>
 .prose {
-  line-height: 1.6;
-  color: #374151;
+  max-width: none;
 }
 
 .prose h1, .prose h2, .prose h3 {
-  color: #1f2937;
-}
-
-.prose p {
-  margin-bottom: 0.75rem;
-}
-
-.prose strong {
-  color: #1f2937;
+  color: #374151;
 }
 
 .prose code {
+  color: #6366f1;
   background-color: #f3f4f6;
-  color: #7c3aed;
-  font-weight: 500;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.4s ease-out;
-}
-
-/* 커스텀 스크롤바 */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.prose strong {
+  color: #111827;
 }
 </style>
