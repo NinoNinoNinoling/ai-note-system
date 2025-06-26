@@ -92,8 +92,18 @@ def create_app_with_debug():
             print(f"📥 User Agent: {request.headers.get('User-Agent', 'Unknown')}")
             if request.args:
                 print(f"📥 Query Params: {dict(request.args)}")
+            
+            # 🔧 안전한 JSON 파싱으로 수정
             if request.is_json:
-                print(f"📥 JSON Data: {request.get_json()}")
+                try:
+                    json_data = request.get_json(silent=True)
+                    if json_data is not None:
+                        print(f"📥 JSON Data: {json_data}")
+                    else:
+                        print(f"📥 JSON Data: (빈 JSON 또는 파싱 실패)")
+                except Exception as e:
+                    print(f"📥 JSON Data: 파싱 에러 - {e}")
+            
             print(f"{'🔥'*50}")
         
         @app.after_request  

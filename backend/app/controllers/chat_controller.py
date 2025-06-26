@@ -180,7 +180,7 @@ class ChatController(BaseController):
     
     def rebuild_rag_index(self):
         """RAG 인덱스 재구축"""
-        self.log_request("rebuild_rag")
+        #self.log_request("rebuild_rag")
         
         try:
             result = self.chat_service.rebuild_rag_index()
