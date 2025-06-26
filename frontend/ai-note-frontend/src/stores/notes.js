@@ -91,23 +91,21 @@ export const useNotesStore = defineStore('notes', {
         console.log('🚀 노트 목록 요청 중...')
         const response = await notesAPI.getAll()
 
-        // ✅ 새 api.js 응답 구조에 맞게 수정
-        console.log('📦 API 응답:', response.data)
+        console.log('📦 전체 응답:', response.data)
 
-        if (response.data?.success && response.data.notes) {
-          this.notes = response.data.notes
-        } else if (Array.isArray(response.data)) {
-          this.notes = response.data
+        // ✅ 올바른 파싱
+        if (response.data?.success && response.data.data?.notes) {
+          this.notes = response.data.data.notes
+          console.log(`✅ ${this.notes.length}개 노트 로드 성공!`)
         } else {
+          console.warn('응답 구조가 예상과 다름:', response.data)
           this.notes = []
         }
 
-        console.log(`✅ ${this.notes.length}개 노트 로드됨`)
-      } catch (fetchError) {
-        this.error = '노트를 불러오는데 실패했습니다.'
-        console.error('노트 로드 에러:', fetchError)
+      } catch (error) {
+        console.error('노트 로드 에러:', error)
         this.notes = []
-        throw fetchError
+        throw error
       } finally {
         this.loading = false
       }

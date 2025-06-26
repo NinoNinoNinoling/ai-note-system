@@ -1,8 +1,8 @@
 # backend/app/services/note_service.py
 """
-NoteService - 노트 관련 비즈니스 로직
+NoteService - 디버깅 강화 버전
 
-노트 생성/수정/삭제, 검색, 태그 처리 등의 비즈니스 규칙을 담당
+모든 DB 조회 및 비즈니스 로직을 상세하게 로깅
 """
 
 from app.repositories.note_repository import NoteRepository
@@ -17,12 +17,14 @@ class NoteService:
     """노트 비즈니스 로직 서비스"""
     
     def __init__(self):
+        print("🔧 NoteService 초기화 중...")
         self.repository = NoteRepository()
         self.rag_available = False
         self.rag_chain = None
         
         # RAG 시스템 초기화
         self._initialize_rag()
+        print("✅ NoteService 초기화 완료")
     
     def _initialize_rag(self):
         """RAG 시스템 초기화"""
@@ -39,6 +41,170 @@ class NoteService:
         except ImportError as e:
             logger.warning(f"⚠️ NoteService RAG 시스템 임포트 실패: {e}")
     
+    def get_all_notes(self, limit=None, offset=None):
+        """모든 노트 조회 (페이지네이션 지원) - 디버깅 강화"""
+        
+        print(f"\n{'='*60}")
+        print(f"🗄️ NoteService.get_all_notes() 실행")
+        print(f"{'='*60}")
+        print(f"📋 Parameters: limit={limit}, offset={offset}")
+        
+        try:
+            print("🔍 Step 1: Repository.find_all() 호출 중...")
+            
+            # Repository에서 데이터 조회
+            notes = self.repository.find_all(limit=limit, offset=offset)
+            
+            print(f"🔍 Step 1 완료:")
+            print(f"   - 조회된 노트 수: {len(notes) if notes else 0}")
+            print(f"   - Notes 타입: {type(notes)}")
+            
+            if notes is None:
+                print("⚠️ Repository에서 None 반환!")
+                return []
+            
+            if len(notes) == 0:
+                print("⚠️ Repository에서 빈 리스트 반환!")
+                print("🔍 DB에 노트가 없거나 쿼리 조건에 맞는 노트가 없음")
+                return notes
+            
+            # 첫 번째 노트 상세 정보 출력
+            if len(notes) > 0:
+                first_note = notes[0]
+                print(f"🔍 첫 번째 노트 상세:")
+                print(f"   - ID: {getattr(first_note, 'id', 'No ID')}")
+                print(f"   - Title: {getattr(first_note, 'title', 'No Title')}")
+                print(f"   - Content Length: {len(getattr(first_note, 'content', '')) if getattr(first_note, 'content', None) else 0}")
+                print(f"   - Created At: {getattr(first_note, 'created_at', 'No Date')}")
+                print(f"   - Tags: {getattr(first_note, 'tags_list', 'No Tags')}")
+                print(f"   - Note Type: {type(first_note)}")
+                
+                # 노트 객체의 모든 속성 출력
+                try:
+                    print(f"🔍 Note Attributes: {dir(first_note)}")
+                    print(f"🔍 Note Dict: {first_note.__dict__ if hasattr(first_note, '__dict__') else 'No __dict__'}")
+                except Exception as attr_error:
+                    print(f"⚠️ 속성 확인 실패: {attr_error}")
+            
+            print(f"✅ NoteService.get_all_notes() 완료: {len(notes)}개 노트 반환")
+            print(f"{'='*60}\n")
+            
+            return notes
+            
+        except Exception as e:
+            print(f"❌ NoteService.get_all_notes() 에러:")
+            print(f"   - 에러 타입: {type(e).__name__}")
+            print(f"   - 에러 메시지: {str(e)}")
+            
+            import traceback
+            print(f"❌ 전체 트레이스백:")
+            traceback.print_exc()
+            
+            logger.error(f"Error getting all notes: {e}")
+            raise Exception(f"노트 목록 조회 중 오류가 발생했습니다: {str(e)}")
+    
+    def get_note_by_id(self, note_id):
+        """ID로 노트 조회"""
+        print(f"\n🔍 NoteService.get_note_by_id({note_id}) 실행")
+        
+        try:
+            if not note_id or note_id <= 0:
+                raise ValueError("유효하지 않은 노트 ID입니다")
+            
+            note = self.repository.find_by_id(note_id)
+            
+            if not note:
+                print(f"❌ 노트 ID {note_id} 찾을 수 없음")
+                raise ValueError(f"노트 ID {note_id}를 찾을 수 없습니다")
+            
+            print(f"✅ 노트 발견: '{note.title}' (ID: {note.id})")
+            return note
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error getting note by id {note_id}: {e}")
+            raise Exception(f"노트 조회 중 오류가 발생했습니다: {str(e)}")
+    
+    def create_note(self, title, content, tags=None):
+        """새 노트 생성"""
+        print(f"\n📝 NoteService.create_note() 실행")
+        print(f"   - Title: {title}")
+        print(f"   - Content Length: {len(content) if content else 0}")
+        print(f"   - Tags: {tags}")
+        
+        try:
+            # 입력값 검증
+            if not title or not title.strip():
+                raise ValueError("제목은 필수입니다")
+            
+            if not content or not content.strip():
+                raise ValueError("내용은 필수입니다")
+            
+            # 제목과 내용 정리
+            title = title.strip()
+            content = content.strip()
+            
+            # 태그 처리
+            if tags is None:
+                tags = self.extract_tags_from_content(content)
+            else:
+                tags = self.validate_tags(tags)
+            
+            print(f"🔍 처리된 태그: {tags}")
+            
+            # Repository를 통해 저장
+            note = self.repository.create(
+                title=title,
+                content=content,
+                tags=tags
+            )
+            
+            print(f"✅ 노트 생성 완료: ID {note.id}")
+            
+            # RAG 인덱스 업데이트
+            self._update_rag_index(note)
+            
+            logger.info(f"Created new note: '{title}' (ID: {note.id})")
+            return note
+            
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(f"Error creating note: {e}")
+            raise Exception(f"노트 생성 중 오류가 발생했습니다: {str(e)}")
+    
+    def extract_tags_from_content(self, content):
+        """내용에서 태그 추출 (#태그 형식)"""
+        if not content:
+            return []
+        
+        # #태그 패턴 추출
+        tags = re.findall(r'#(\w+)', content)
+        # 중복 제거 및 소문자 변환
+        unique_tags = list(set(tag.lower() for tag in tags))
+        
+        return unique_tags
+    
+    def validate_tags(self, tags):
+        """태그 유효성 검증"""
+        if not tags:
+            return []
+        
+        if isinstance(tags, str):
+            # 쉼표 구분 문자열인 경우
+            tags = [tag.strip() for tag in tags.split(',')]
+        
+        # 빈 태그 제거 및 소문자 변환
+        validated_tags = []
+        for tag in tags:
+            if isinstance(tag, str) and tag.strip():
+                clean_tag = tag.strip().lower()
+                if clean_tag not in validated_tags:
+                    validated_tags.append(clean_tag)
+        
+        return validated_tags
+    
     def _update_rag_index(self, note):
         """RAG 인덱스 업데이트"""
         if self.rag_available and self.rag_chain:
@@ -51,274 +217,30 @@ class NoteService:
             except Exception as e:
                 logger.error(f"❌ RAG 인덱스 업데이트 오류: {e}")
     
-    def create_note(self, title, content, tags=None):
-        """
-        새 노트 생성
-        
-        Args:
-            title: 노트 제목
-            content: 노트 내용
-            tags: 태그 리스트 (없으면 자동 추출)
-        """
-        try:
-            # 입력값 검증
-            if not title or not title.strip():
-                raise ValueError("제목은 필수입니다")
-            
-            if not content or not content.strip():
-                raise ValueError("내용은 필수입니다")
-            
-            # 제목 정리
-            title = title.strip()
-            if len(title) > 200:
-                raise ValueError("제목은 200자를 초과할 수 없습니다")
-            
-            # 태그 처리
-            if tags is None:
-                tags = self.extract_tags_from_content(content)
-            else:
-                tags = self.validate_tags(tags)
-            
-            # 노트 생성
-            note = self.repository.create(
-                title=title,
-                content=content,
-                tags=tags
-            )
-            
-            # ✨ RAG 인덱스 업데이트
-            self._update_rag_index(note)
-            
-            logger.info(f"Created note '{title}' with {len(tags)} tags")
-            return note
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"Error creating note: {e}")
-            raise Exception(f"노트 생성 중 오류가 발생했습니다: {str(e)}")
-    
-    def get_note_by_id(self, note_id):
-        """ID로 노트 조회"""
-        try:
-            if not note_id or note_id <= 0:
-                raise ValueError("유효하지 않은 노트 ID입니다")
-            
-            note = self.repository.find_by_id(note_id)
-            if not note:
-                raise ValueError(f"노트 ID {note_id}를 찾을 수 없습니다")
-            
-            return note
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"Error getting note {note_id}: {e}")
-            raise Exception(f"노트 조회 중 오류가 발생했습니다: {str(e)}")
-    
-    def update_note(self, note_id, title=None, content=None, tags=None):
-        """노트 업데이트"""
-        try:
-            # 기존 노트 조회
-            note = self.get_note_by_id(note_id)
-            
-            # 업데이트할 데이터 준비
-            update_data = {}
-            
-            if title is not None:
-                title = title.strip()
-                if not title:
-                    raise ValueError("제목은 비워둘 수 없습니다")
-                if len(title) > 200:
-                    raise ValueError("제목은 200자를 초과할 수 없습니다")
-                update_data['title'] = title
-            
-            if content is not None:
-                if not content.strip():
-                    raise ValueError("내용은 비워둘 수 없습니다")
-                update_data['content'] = content
-                
-                # 내용이 변경되면 태그도 자동 추출 (tags가 명시적으로 제공되지 않은 경우)
-                if tags is None:
-                    update_data['tags'] = self.extract_tags_from_content(content)
-            
-            if tags is not None:
-                update_data['tags'] = self.validate_tags(tags)
-            
-            # 변경사항이 없으면 그냥 반환
-            if not update_data:
-                return note
-            
-            # 업데이트 실행
-            updated_note = self.repository.update(note, **update_data)
-            
-            # ✨ RAG 인덱스 업데이트 (제목이나 내용이 변경된 경우)
-            if 'title' in update_data or 'content' in update_data:
-                self._update_rag_index(updated_note)
-            
-            logger.info(f"Updated note {note_id}: {list(update_data.keys())}")
-            return updated_note
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"Error updating note {note_id}: {e}")
-            raise Exception(f"노트 업데이트 중 오류가 발생했습니다: {str(e)}")
-    
-    def delete_note(self, note_id):
-        """노트 삭제"""
-        try:
-            # 노트 존재 확인
-            note = self.get_note_by_id(note_id)
-            
-            # 삭제 실행
-            success = self.repository.delete(note)
-            
-            if success:
-                logger.info(f"Deleted note {note_id}: '{note.title}'")
-            
-            return success
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"Error deleting note {note_id}: {e}")
-            raise Exception(f"노트 삭제 중 오류가 발생했습니다: {str(e)}")
-    
-    def get_all_notes(self, limit=None, offset=None):
-        """모든 노트 조회 (페이지네이션 지원)"""
-        try:
-            notes = self.repository.find_all(limit=limit, offset=offset)
-            return notes
-        except Exception as e:
-            logger.error(f"Error getting all notes: {e}")
-            raise Exception(f"노트 목록 조회 중 오류가 발생했습니다: {str(e)}")
-    
+    # 다른 메서드들도 기본 로깅 유지
     def search_notes(self, query=None, tags=None, limit=50):
         """노트 검색"""
+        print(f"\n🔍 NoteService.search_notes() 실행")
+        print(f"   - Query: {query}")
+        print(f"   - Tags: {tags}")
+        print(f"   - Limit: {limit}")
+        
         try:
             if not query and not tags:
                 # 검색어가 없으면 최근 노트 반환
-                return self.repository.find_recent(limit)
+                results = self.repository.find_recent(limit)
+            else:
+                # 통합 검색 실행
+                results = self.repository.search_combined(
+                    query=query,
+                    tags=tags,
+                    limit=limit
+                )
             
-            # 통합 검색 실행
-            results = self.repository.search_combined(
-                query=query,
-                tags=tags,
-                limit=limit
-            )
-            
+            print(f"✅ 검색 완료: {len(results)}개 노트 발견")
             logger.info(f"Search completed: query='{query}', tags={tags}, results={len(results)}")
             return results
             
         except Exception as e:
             logger.error(f"Error searching notes: {e}")
             raise Exception(f"노트 검색 중 오류가 발생했습니다: {str(e)}")
-    
-    def get_all_tags(self):
-        """모든 태그 목록"""
-        try:
-            return self.repository.get_all_tags()
-        except Exception as e:
-            logger.error(f"Error getting all tags: {e}")
-            raise Exception(f"태그 목록 조회 중 오류가 발생했습니다: {str(e)}")
-    
-    def get_notes_by_tag(self, tag):
-        """특정 태그의 노트들"""
-        try:
-            if not tag or not tag.strip():
-                raise ValueError("태그는 필수입니다")
-            
-            tag = tag.strip().lower()
-            notes = self.repository.find_by_tags([tag])
-            
-            return notes
-            
-        except ValueError:
-            raise
-        except Exception as e:
-            logger.error(f"Error getting notes by tag '{tag}': {e}")
-            raise Exception(f"태그별 노트 조회 중 오류가 발생했습니다: {str(e)}")
-    
-    def get_note_stats(self):
-        """노트 통계"""
-        try:
-            stats = self.repository.get_note_stats()
-            
-            # 추가 통계 계산
-            recent_notes = self.repository.find_recent(10)
-            stats['recent_activity'] = len([
-                note for note in recent_notes 
-                if note.created_at > datetime.now() - timedelta(days=7)
-            ])
-            
-            return stats
-            
-        except Exception as e:
-            logger.error(f"Error getting note stats: {e}")
-            raise Exception(f"통계 조회 중 오류가 발생했습니다: {str(e)}")
-    
-    def extract_tags_from_content(self, content):
-        """
-        마크다운 내용에서 태그 자동 추출
-        
-        #태그 형태의 해시태그를 찾아서 추출
-        """
-        try:
-            if not content:
-                return []
-            
-            # #태그 패턴 찾기 (한글, 영문, 숫자, 하이픈, 언더스코어 허용)
-            tag_pattern = r'#([가-힣A-Za-z0-9_-]+)'
-            matches = re.findall(tag_pattern, content)
-            
-            # 중복 제거, 소문자 변환, 정렬
-            tags = sorted(list(set(tag.lower() for tag in matches)))
-            
-            return tags
-            
-        except Exception as e:
-            logger.error(f"Error extracting tags from content: {e}")
-            return []
-    
-    def validate_tags(self, tags):
-        """태그 유효성 검증"""
-        try:
-            if not tags:
-                return []
-            
-            if isinstance(tags, str):
-                tags = [tags]
-            
-            validated_tags = []
-            
-            for tag in tags:
-                if not isinstance(tag, str):
-                    continue
-                
-                tag = tag.strip().lower()
-                
-                # 빈 태그 제거
-                if not tag:
-                    continue
-                
-                # 길이 제한
-                if len(tag) > 50:
-                    tag = tag[:50]
-                
-                # 특수문자 정리 (한글, 영문, 숫자, 하이픈, 언더스코어만 허용)
-                tag = re.sub(r'[^가-힣A-Za-z0-9_-]', '', tag)
-                
-                if tag and tag not in validated_tags:
-                    validated_tags.append(tag)
-            
-            # 태그 개수 제한 (최대 10개)
-            if len(validated_tags) > 10:
-                validated_tags = validated_tags[:10]
-                logger.warning("태그 개수가 10개를 초과하여 자동으로 제한되었습니다")
-            
-            return sorted(validated_tags)
-            
-        except Exception as e:
-            logger.error(f"Error validating tags: {e}")
-            return []

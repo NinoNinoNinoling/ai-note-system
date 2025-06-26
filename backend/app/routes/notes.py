@@ -1,12 +1,18 @@
 # backend/app/routes/notes.py
 """
-Notes 라우트 - 깔끔한 버전
+Notes 라우트 - 디버깅 강화 버전
 
-이제 라우팅만 담당하고 모든 로직은 NoteController가 처리
+모든 요청/응답을 상세하게 로깅
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from app.controllers.note_controller import NoteController
+import logging
+import json
+from datetime import datetime
+
+# 로거 설정
+logger = logging.getLogger(__name__)
 
 # Blueprint 생성
 notes_bp = Blueprint('notes', __name__)
@@ -15,54 +21,167 @@ notes_bp = Blueprint('notes', __name__)
 controller = NoteController()
 
 
+def log_request_details(endpoint_name):
+    """요청 상세 정보 로깅"""
+    print(f"\n{'='*50}")
+    print(f"🚀 API 요청: {endpoint_name}")
+    print(f"{'='*50}")
+    print(f"📍 URL: {request.url}")
+    print(f"📍 Method: {request.method}")
+    print(f"📍 Path: {request.path}")
+    print(f"📍 Remote Address: {request.remote_addr}")
+    print(f"📍 User Agent: {request.headers.get('User-Agent', 'Unknown')}")
+    
+    # 쿼리 파라미터
+    if request.args:
+        print(f"📋 Query Params: {dict(request.args)}")
+    
+    # 헤더 정보
+    print(f"📋 Content-Type: {request.headers.get('Content-Type', 'None')}")
+    print(f"📋 Accept: {request.headers.get('Accept', 'None')}")
+    
+    # JSON 데이터 (있으면)
+    if request.is_json and request.get_json():
+        print(f"📋 JSON Data: {request.get_json()}")
+    
+    print(f"{'='*50}\n")
+
+
+def log_response_details(response_data, status_code=200):
+    """응답 상세 정보 로깅"""
+    print(f"\n{'='*50}")
+    print(f"📤 API 응답")
+    print(f"{'='*50}")
+    print(f"📊 Status Code: {status_code}")
+    print(f"📊 Response Type: {type(response_data)}")
+    
+    if isinstance(response_data, dict):
+        print(f"📊 Response Keys: {list(response_data.keys())}")
+        
+        # 노트 데이터가 있으면 개수 확인
+        if 'notes' in response_data:
+            notes = response_data['notes']
+            print(f"📊 Notes Count: {len(notes) if notes else 0}")
+            
+            if notes and len(notes) > 0:
+                print(f"📊 First Note: {notes[0].get('title', 'No Title')} (ID: {notes[0].get('id', 'No ID')})")
+            else:
+                print(f"⚠️ Notes Array is Empty!")
+        
+        # 전체 응답 크기
+        response_str = str(response_data)
+        print(f"📊 Response Size: {len(response_str)} characters")
+        
+        # 처음 200자만 미리보기
+        preview = response_str[:200] + "..." if len(response_str) > 200 else response_str
+        print(f"📊 Response Preview: {preview}")
+    
+    print(f"{'='*50}\n")
+
+
 # ====== 노트 CRUD ======
 
 @notes_bp.route('/notes', methods=['GET'])
 def get_notes():
-    """노트 목록 조회"""
+    """노트 목록 조회 - 디버깅 강화"""
+    
+    log_request_details("GET /api/notes")
+    
     try:
+        print("🔍 Step 1: 쿼리 파라미터 추출 중...")
+        
         # 쿼리 파라미터 추출
         limit = request.args.get('limit', type=int)
         offset = request.args.get('offset', type=int)
         
+        print(f"🔍 Step 1 완료: limit={limit}, offset={offset}")
+        
+        print("🔍 Step 2: NoteService.get_all_notes() 호출 중...")
+        
         # 노트 조회
         notes = controller.service.get_all_notes(limit=limit, offset=offset)
         
+        print(f"🔍 Step 2 완료: {len(notes) if notes else 0}개 노트 조회됨")
+        print(f"🔍 Notes Type: {type(notes)}")
+        
+        if notes:
+            print(f"🔍 First Note Type: {type(notes[0])}")
+            print(f"🔍 First Note: {notes[0]}")
+        
+        print("🔍 Step 3: 노트 딕셔너리 변환 중...")
+        
         # 응답 데이터 구성
+        notes_dicts = []
+        for i, note in enumerate(notes):
+            try:
+                note_dict = controller._note_to_dict(note)
+                notes_dicts.append(note_dict)
+                if i == 0:  # 첫 번째 노트만 로그
+                    print(f"🔍 First Note Dict: {note_dict}")
+            except Exception as convert_error:
+                print(f"❌ 노트 {i} 변환 실패: {convert_error}")
+                continue
+        
         response_data = {
-            "notes": [controller._note_to_dict(note) for note in notes],
-            "total": len(notes),
+            "notes": notes_dicts,
+            "total": len(notes_dicts),
             "limit": limit,
             "offset": offset
         }
         
-        return controller.success_response(
+        print(f"🔍 Step 3 완료: {len(notes_dicts)}개 노트 딕셔너리 변환됨")
+        
+        print("🔍 Step 4: 성공 응답 생성 중...")
+        
+        success_response = controller.success_response(
             data=response_data,
             message=f"{len(notes)}개의 노트를 조회했습니다"
         )
         
+        print(f"🔍 Step 4 완료: 응답 생성됨")
+        
+        # 응답 로깅
+        log_response_details(success_response[0].get_json() if hasattr(success_response[0], 'get_json') else success_response)
+        
+        return success_response
+        
     except Exception as e:
-        return controller.error_response(
+        print(f"❌ 에러 발생: {type(e).__name__}: {str(e)}")
+        import traceback
+        print(f"❌ 전체 트레이스백:")
+        traceback.print_exc()
+        
+        error_response = controller.error_response(
             message="노트 목록 조회 실패",
             details=str(e),
             status=500
         )
+        
+        log_response_details(error_response[0].get_json() if hasattr(error_response[0], 'get_json') else error_response, 500)
+        
+        return error_response
 
 
 @notes_bp.route('/notes/<int:note_id>', methods=['GET'])
 def get_note(note_id):
     """특정 노트 조회"""
+    log_request_details(f"GET /api/notes/{note_id}")
+    
     try:
         note = controller.service.get_note_by_id(note_id)
         
-        return controller.success_response(
+        response = controller.success_response(
             data={"note": controller._note_to_dict(note)},
             message="노트를 조회했습니다"
         )
         
+        log_response_details(response[0].get_json() if hasattr(response[0], 'get_json') else response)
+        return response
+        
     except ValueError as e:
         return controller.not_found_error("노트")
     except Exception as e:
+        print(f"❌ 노트 조회 에러: {e}")
         return controller.error_response(
             message="노트 조회 실패",
             details=str(e),
@@ -70,21 +189,46 @@ def get_note(note_id):
         )
 
 
+# 간단한 테스트 엔드포인트
+@notes_bp.route('/notes/test', methods=['GET'])
+def test_notes():
+    """테스트용 엔드포인트"""
+    log_request_details("GET /api/notes/test")
+    
+    response_data = {
+        "message": "Notes API Test Successful",
+        "timestamp": str(datetime.now()),
+        "test_notes": [
+            {"id": 1, "title": "Test Note 1", "content": "Test Content 1"},
+            {"id": 2, "title": "Test Note 2", "content": "Test Content 2"}
+        ]
+    }
+    
+    log_response_details(response_data)
+    
+    return jsonify(response_data), 200
+
+
+# 나머지 엔드포인트들도 기본 로깅 추가
 @notes_bp.route('/notes', methods=['POST'])
 def create_note():
     """새 노트 생성"""
+    log_request_details("POST /api/notes")
     return controller.create_note()
 
 
 @notes_bp.route('/notes/<int:note_id>', methods=['PUT'])
 def update_note(note_id):
     """노트 업데이트"""
+    log_request_details(f"PUT /api/notes/{note_id}")
     return controller.update_note(note_id)
 
 
 @notes_bp.route('/notes/<int:note_id>', methods=['DELETE'])
 def delete_note(note_id):
     """노트 삭제"""
+    log_request_details(f"DELETE /api/notes/{note_id}")
+    
     try:
         success = controller.service.delete_note(note_id)
         
@@ -104,195 +248,6 @@ def delete_note(note_id):
     except Exception as e:
         return controller.error_response(
             message="노트 삭제 실패",
-            details=str(e),
-            status=500
-        )
-
-
-# ====== 검색 & 필터링 ======
-
-@notes_bp.route('/notes/search', methods=['POST'])
-def search_notes():
-    """노트 검색"""
-    try:
-        # JSON 데이터가 없는 경우 빈 검색으로 처리 (최근 노트 반환)
-        data = request.get_json() or {}
-        
-        query = data.get('query')
-        tags = data.get('tags')
-        limit = data.get('limit', 50)
-        
-        # 검색 실행
-        results = controller.service.search_notes(
-            query=query,
-            tags=tags,
-            limit=limit
-        )
-        
-        return controller.success_response(
-            data={
-                "notes": [controller._note_to_dict(note) for note in results],
-                "total": len(results),
-                "query": query,
-                "tags": tags
-            },
-            message=f"{len(results)}개의 노트를 찾았습니다"
-        )
-        
-    except Exception as e:
-        return controller.error_response(
-            message="노트 검색 실패",
-            details=str(e),
-            status=500
-        )
-
-
-@notes_bp.route('/notes/tags', methods=['GET'])
-def get_tags():
-    """모든 태그 목록"""
-    try:
-        tags = controller.service.get_all_tags()
-        
-        return controller.success_response(
-            data={
-                "tags": tags,
-                "total": len(tags)
-            },
-            message=f"{len(tags)}개의 태그를 조회했습니다"
-        )
-        
-    except Exception as e:
-        return controller.error_response(
-            message="태그 목록 조회 실패",
-            details=str(e),
-            status=500
-        )
-
-
-@notes_bp.route('/notes/tags/<string:tag>', methods=['GET'])
-def get_notes_by_tag(tag):
-    """특정 태그의 노트들"""
-    try:
-        notes = controller.service.get_notes_by_tag(tag)
-        
-        return controller.success_response(
-            data={
-                "notes": [controller._note_to_dict(note) for note in notes],
-                "total": len(notes),
-                "tag": tag
-            },
-            message=f"'{tag}' 태그로 {len(notes)}개의 노트를 찾았습니다"
-        )
-        
-    except ValueError as e:
-        return controller.validation_error("tag", str(e))
-    except Exception as e:
-        return controller.error_response(
-            message="태그별 노트 조회 실패",
-            details=str(e),
-            status=500
-        )
-
-
-@notes_bp.route('/notes/stats', methods=['GET'])
-def get_stats():
-    """노트 통계"""
-    try:
-        stats = controller.service.get_note_stats()
-        
-        return controller.success_response(
-            data=stats,
-            message="통계를 조회했습니다"
-        )
-        
-    except Exception as e:
-        return controller.error_response(
-            message="통계 조회 실패",
-            details=str(e),
-            status=500
-        )
-
-
-# ====== 추가 유틸리티 엔드포인트 ======
-
-@notes_bp.route('/notes/recent', methods=['GET'])
-def get_recent_notes():
-    """최근 노트들 (빠른 접근용)"""
-    from flask import request
-    
-    limit = request.args.get('limit', 10, type=int)
-    
-    # 검색에서 query=None으로 호출하면 최근 노트를 반환
-    from app.services.note_service import NoteService
-    service = NoteService()
-    notes = service.search_notes(limit=limit)
-    
-    response_data = {
-        "notes": [controller._note_to_dict(note) for note in notes],
-        "total": len(notes)
-    }
-    
-    return controller.success_response(
-        data=response_data,
-        message=f"최근 {len(notes)}개의 노트를 조회했습니다"
-    )
-
-
-@notes_bp.route('/notes/validate', methods=['POST'])
-def validate_note_data():
-    """노트 데이터 검증 (프론트엔드용 유틸리티)"""
-    data, error = controller.get_json_data()
-    if error:
-        return error
-    
-    try:
-        # 검증만 수행 (실제 저장하지 않음)
-        title = data.get('title', '')
-        content = data.get('content', '')
-        tags = data.get('tags', [])
-        
-        # 기본 검증
-        validation_result = {
-            "valid": True,
-            "errors": [],
-            "warnings": []
-        }
-        
-        # 제목 검증
-        if not title or not title.strip():
-            validation_result["valid"] = False
-            validation_result["errors"].append("제목은 필수입니다")
-        elif len(title.strip()) > 200:
-            validation_result["valid"] = False
-            validation_result["errors"].append("제목은 200자를 초과할 수 없습니다")
-        
-        # 내용 검증
-        if not content or not content.strip():
-            validation_result["valid"] = False
-            validation_result["errors"].append("내용은 필수입니다")
-        
-        # 태그 검증
-        from app.services.note_service import NoteService
-        service = NoteService()
-        
-        if tags:
-            validated_tags = service.validate_tags(tags)
-            if len(validated_tags) != len(tags):
-                validation_result["warnings"].append("일부 태그가 정리되었습니다")
-        
-        # 자동 추출된 태그 정보 제공
-        if content:
-            auto_tags = service.extract_tags_from_content(content)
-            validation_result["auto_tags"] = auto_tags
-        
-        return controller.success_response(
-            data=validation_result,
-            message="검증이 완료되었습니다"
-        )
-        
-    except Exception as e:
-        return controller.error_response(
-            message="검증 중 오류가 발생했습니다",
             details=str(e),
             status=500
         )

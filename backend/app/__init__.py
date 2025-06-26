@@ -1,7 +1,8 @@
+# backend/app/__init__.py
 """
 AI Note System - Flask 애플리케이션 팩토리
 
-모듈화된 Flask 앱 구조 (CORS 문제 해결)
+모듈화된 Flask 앱 구조 (라우트 중복 문제 해결)
 """
 
 from flask import Flask, jsonify
@@ -26,14 +27,6 @@ def create_app():
          allow_headers=['Content-Type', 'Authorization'],
          supports_credentials=True
     )
-    
-    # ❌ after_request CORS 설정 제거 (중복 방지)
-    # @app.after_request 
-    # def after_request(response):
-    #     response.headers.add('Access-Control-Allow-Origin', '*')
-    #     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    #     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    #     return response
     
     # 데이터베이스 초기화
     from config.database import init_db
@@ -88,7 +81,7 @@ def register_basic_routes(app):
             "endpoints": {
                 "health": "/health",
                 "notes": "/api/notes", 
-                "chat": "/api/chat"
+                "chat": "/api/"
             }
         })
     
@@ -120,25 +113,11 @@ def register_basic_routes(app):
             "timestamp": datetime.now().isoformat()
         })
     
-    @app.route('/api/notes')
-    def get_notes_basic():
-        """기본 노트 API (Blueprint 없을 때 대체)"""
-        sample_notes = [
-            {
-                "id": 1,
-                "title": "🎉 CORS 문제 해결 완료!",
-                "content": "# 성공!\n\nCORS 중복 설정 문제 해결",
-                "tags": ["success", "cors", "fixed"],
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
-            }
-        ]
-        
-        return jsonify({
-            "notes": sample_notes,
-            "total": len(sample_notes),
-            "message": "CORS 문제 해결된 노트 API"
-        })
+    # ❌ 중복 라우트 제거: /api/notes는 NOTES Blueprint에서 처리
+    # @app.route('/api/notes')
+    # def get_notes_basic():
+    #     """기본 노트 API (Blueprint 없을 때 대체) - 제거됨"""
+    #     pass
     
     @app.errorhandler(404)
     def not_found(error):
@@ -212,5 +191,7 @@ def print_registered_endpoints(app):
     if not api_endpoints:
         print("  ⚠️ /api/ 엔드포인트가 등록되지 않았습니다!")
         print("  💡 Blueprint 등록 확인 필요")
+    else:
+        print(f"\n✅ {len(api_endpoints)}개 API 엔드포인트 정상 등록")
     
     print("\n")

@@ -1,13 +1,8 @@
 # backend/run.py
 """
-완전히 수정된 서버 실행 파일
+디버깅 강화된 서버 실행 파일
 
-✅ 개선사항:
-1. 포괄적인 에러 처리
-2. 환경 체크 및 경고
-3. 개발/프로덕션 모드 구분
-4. 깔끔한 시작 메시지
-5. 종료 처리 개선
+모든 요청과 응답을 상세하게 로깅
 """
 
 import os
@@ -19,102 +14,131 @@ from datetime import datetime
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
-def setup_logging():
-    """로깅 설정"""
-    log_level = logging.DEBUG if os.getenv('FLASK_DEBUG', 'True').lower() == 'true' else logging.INFO
+def setup_enhanced_logging():
+    """강화된 로깅 설정"""
     
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
+    # 모든 로거를 DEBUG 레벨로 설정
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    
+    # 콘솔 핸들러 설정
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.DEBUG)
+    
+    # 상세한 포맷터 설정
+    detailed_formatter = logging.Formatter(
+        '%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s'
     )
+    console_handler.setFormatter(detailed_formatter)
     
-    # 외부 라이브러리 로그 레벨 조정
-    logging.getLogger('werkzeug').setLevel(logging.WARNING)
-    logging.getLogger('urllib3').setLevel(logging.WARNING)
-
-def check_environment():
-    """환경 변수 및 의존성 체크"""
-    warnings = []
-    errors = []
+    # 루트 로거에 핸들러 추가
+    root_logger.addHandler(console_handler)
     
-    # 필수 환경 변수 체크
-    required_env_vars = ['SECRET_KEY']
-    for var in required_env_vars:
-        if not os.getenv(var):
-            errors.append(f"환경 변수 {var}가 설정되지 않았습니다")
+    # 주요 로거들 DEBUG 레벨로 설정
+    important_loggers = [
+        'app.routes.notes',
+        'app.controllers.note_controller', 
+        'app.services.note_service',
+        'app.repositories.note_repository',
+        'sqlalchemy.engine',
+        'flask',
+        'werkzeug'
+    ]
     
-    # 선택적 환경 변수 체크
-    optional_env_vars = {
-        'ANTHROPIC_API_KEY': 'Claude AI 기능이 제한됩니다',
-        'DATABASE_URL': '기본 SQLite 데이터베이스를 사용합니다'
-    }
+    for logger_name in important_loggers:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG)
+        logger.propagate = True
     
-    for var, warning_msg in optional_env_vars.items():
-        if not os.getenv(var):
-            warnings.append(f"{var} 미설정: {warning_msg}")
+    # SQLAlchemy 쿼리 로깅 활성화
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    logging.getLogger('sqlalchemy.pool').setLevel(logging.INFO)
     
-    # 필수 디렉토리 체크
-    required_dirs = ['data', 'models', 'app']
-    for dir_name in required_dirs:
-        if not os.path.exists(dir_name):
-            warnings.append(f"디렉토리 {dir_name}이 없습니다")
-    
-    return warnings, errors
+    print("✅ 강화된 디버깅 로깅 설정 완료")
 
 def print_startup_banner():
     """시작 배너 출력"""
-    print("\n" + "="*50)
-    print("🧠 AI Note System - 과제용 버전")
-    print("="*50)
+    print("\n" + "="*60)
+    print("🧠 AI Note System - 디버깅 모드")
+    print("="*60)
     print(f"📍 서버: http://localhost:5000")
     print(f"🔍 상태: http://localhost:5000/health")
     print(f"📝 노트: http://localhost:5000/api/notes")
-    print(f"🤖 채팅: http://localhost:5000/api/chat")
-    print("="*50)
+    print(f"🧪 테스트: http://localhost:5000/api/notes/test")
+    print(f"🤖 채팅: http://localhost:5000/api/")
+    print("="*60)
+    print("🔍 모든 API 요청이 상세하게 로깅됩니다")
+    print("="*60)
 
-def create_app_with_error_handling():
-    """에러 처리가 포함된 앱 생성"""
+def create_app_with_debug():
+    """디버깅이 강화된 앱 생성"""
     try:
         from app import create_app
+        
+        print("🚀 Flask 앱 생성 중...")
         app = create_app()
+        
+        # Flask 앱 로깅 설정
+        app.logger.setLevel(logging.DEBUG)
+        
+        # 요청 로깅 미들웨어 추가
+        @app.before_request
+        def log_request_info():
+            from flask import request
+            print(f"\n{'🔥'*50}")
+            print(f"📥 들어온 요청: {request.method} {request.path}")
+            print(f"📥 Full URL: {request.url}")
+            print(f"📥 Remote IP: {request.remote_addr}")
+            print(f"📥 User Agent: {request.headers.get('User-Agent', 'Unknown')}")
+            if request.args:
+                print(f"📥 Query Params: {dict(request.args)}")
+            if request.is_json:
+                print(f"📥 JSON Data: {request.get_json()}")
+            print(f"{'🔥'*50}")
+        
+        @app.after_request  
+        def log_response_info(response):
+            print(f"\n{'🚀'*50}")
+            print(f"📤 응답: {response.status}")
+            print(f"📤 Content-Type: {response.content_type}")
+            print(f"📤 Content-Length: {response.content_length}")
+            
+            # JSON 응답인 경우 내용 일부 출력
+            if response.content_type and 'application/json' in response.content_type:
+                try:
+                    response_data = response.get_json()
+                    if response_data:
+                        print(f"📤 Response Keys: {list(response_data.keys()) if isinstance(response_data, dict) else 'Not a dict'}")
+                        if isinstance(response_data, dict) and 'notes' in response_data:
+                            notes = response_data['notes']
+                            print(f"📤 Notes Count: {len(notes) if notes else 0}")
+                except:
+                    print(f"📤 Response Body: {response.get_data()[:200]}...")
+            
+            print(f"{'🚀'*50}\n")
+            return response
+        
+        print("✅ Flask 앱 생성 완료")
         return app, None
-    except ImportError as e:
-        return None, f"앱 모듈 임포트 실패: {e}"
+        
     except Exception as e:
+        print(f"❌ 앱 생성 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return None, f"앱 생성 실패: {e}"
 
 def main():
     """메인 실행 함수"""
-    # 로깅 설정
-    setup_logging()
-    logger = logging.getLogger(__name__)
     
     print_startup_banner()
     
+    # 강화된 로깅 설정
+    setup_enhanced_logging()
+    
     try:
-        # 환경 체크
-        warnings, errors = check_environment()
-        
-        # 에러가 있으면 종료
-        if errors:
-            print("\n❌ 심각한 오류:")
-            for error in errors:
-                print(f"   - {error}")
-            print("\n.env 파일을 확인하고 다시 시도해주세요.")
-            sys.exit(1)
-        
-        # 경고가 있으면 출력
-        if warnings:
-            print("\n⚠️ 경고사항:")
-            for warning in warnings:
-                print(f"   - {warning}")
-        
         # Flask 앱 생성
         print("\n🚀 서버 시작!")
-        app, error = create_app_with_error_handling()
+        app, error = create_app_with_debug()
         
         if error:
             print(f"\n❌ 앱 생성 실패: {error}")
@@ -125,16 +149,25 @@ def main():
             sys.exit(1)
         
         # 개발 서버 설정
-        debug_mode = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-        host = os.getenv('FLASK_HOST', '127.0.0.1')
-        port = int(os.getenv('FLASK_PORT', 5000))
+        debug_mode = True  # 강제로 디버그 모드
+        host = '127.0.0.1'
+        port = 5000
+        
+        print(f"\n🎯 서버 설정:")
+        print(f"   - Host: {host}")
+        print(f"   - Port: {port}")
+        print(f"   - Debug: {debug_mode}")
+        print(f"   - Threaded: True")
+        
+        print(f"\n🚀 서버 실행 중...")
+        print(f"브라우저에서 http://localhost:5000/api/notes 접속해보세요!")
         
         # 서버 실행
         app.run(
             host=host,
             port=port,
             debug=debug_mode,
-            use_reloader=debug_mode,
+            use_reloader=False,  # 리로더 비활성화 (로그 중복 방지)
             threaded=True
         )
         
@@ -144,22 +177,16 @@ def main():
         
     except OSError as e:
         if "Address already in use" in str(e):
-            print(f"\n❌ 포트 {port}가 이미 사용 중입니다.")
-            print("다른 포트를 사용하거나 기존 프로세스를 종료해주세요.")
-            print(f"💡 다른 포트로 실행: FLASK_PORT=5001 python run.py")
+            print(f"\n❌ 포트 5000이 이미 사용 중입니다.")
+            print("기존 서버를 종료하고 다시 시도해주세요.")
         else:
             print(f"\n❌ 네트워크 오류: {e}")
         sys.exit(1)
         
-    except ImportError as e:
-        print(f"\n❌ 모듈 임포트 실패: {e}")
-        print("💡 의존성을 설치해주세요: pip install -r requirements.txt")
-        sys.exit(1)
-        
     except Exception as e:
-        logger.exception("예상치 못한 오류 발생")
         print(f"\n❌ 예상치 못한 오류: {e}")
-        print("💡 로그를 확인하고 문제를 해결해주세요.")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
         
     finally:
